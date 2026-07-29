@@ -10,17 +10,20 @@ import LyricPanel from "../components/LyricPanel.vue";
 import SettingsPanel from "../components/SettingsPanel.vue";
 import DownloadModal from "../components/DownloadModal.vue";
 import DownloadPanel from "../components/DownloadPanel.vue";
+import UpdateDialog from "../components/UpdateDialog.vue";
 import ThemeDecor from "../components/ThemeDecor.vue";
 import Icon from "../components/Icon.vue";
 import { usePlayerStore } from "../stores/player";
 import { useDownloadStore } from "../stores/download";
 import { useSettingsStore } from "../stores/settings";
 import { provideDownloadModal } from "../composables/useDownloadModal";
+import { useUpdater } from "../composables/useUpdater";
 import { getSkin } from "../themes/apply";
 
 const player = usePlayerStore();
 const downloadStore = useDownloadStore();
 const settings = useSettingsStore();
+const { scheduleSilentCheck } = useUpdater();
 const active = ref("search");
 const { show: downloadShow, track: downloadTrack } = provideDownloadModal();
 
@@ -88,6 +91,8 @@ function onKey(e: KeyboardEvent) {
 onMounted(() => {
   player.setupRemoteControl();
   window.addEventListener("keydown", onKey);
+  // 启动后延迟静默检查更新（仅有新版本时弹窗）
+  scheduleSilentCheck(4000);
 });
 
 onUnmounted(() => {
@@ -135,6 +140,7 @@ onUnmounted(() => {
       </div>
       <PlayerBar />
       <DownloadModal v-model:show="downloadShow" :track="downloadTrack" />
+      <UpdateDialog />
       <div
         v-if="player.error"
         class="absolute bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm shadow-lg z-50"

@@ -27,3 +27,6 @@ dist-ssr
 src-tauri/target
 src-tauri/gen/schemas
 *.pdb
+
+# Updater signing keys (never commit private key)
+src-tauri/.tauri-keys/

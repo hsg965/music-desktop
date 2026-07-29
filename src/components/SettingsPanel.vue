@@ -13,9 +13,18 @@ import {
   openThemePicker,
   closeWindowByLabel,
 } from "../utils/windows";
+import { useUpdater } from "../composables/useUpdater";
 
 const settings = useSettingsStore();
 const player = usePlayerStore();
+const {
+  currentVersion,
+  phase,
+  isBusy,
+  loadCurrentVersion,
+  checkForUpdate,
+  openGitHubReleases,
+} = useUpdater();
 
 const rate = ref(getRateLimitStatus());
 let rateTimer: number | null = null;
@@ -38,6 +47,7 @@ onMounted(() => {
   } catch {
     // ignore
   }
+  void loadCurrentVersion();
   rateTimer = window.setInterval(() => {
     rate.value = getRateLimitStatus();
   }, 1000);
@@ -195,6 +205,31 @@ function onLookAhead(v: number) {
             </div>
           </div>
           <NSwitch :value="settings.miniPlayer" @update:value="onMiniPlayer" />
+        </div>
+      </div>
+
+      <NDivider title-placement="left">关于与更新</NDivider>
+
+      <div class="max-w-md space-y-3">
+        <div class="text-sm" style="color: var(--text-muted)">
+          当前版本
+          <b style="color: var(--text)">{{ currentVersion || "…" }}</b>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <NButton
+            type="primary"
+            secondary
+            :loading="phase === 'checking' || isBusy"
+            @click="checkForUpdate(false)"
+          >
+            检查更新
+          </NButton>
+          <NButton quaternary @click="openGitHubReleases">
+            GitHub Releases
+          </NButton>
+        </div>
+        <div class="text-xs" style="color: var(--text-faint)">
+          通过 GitHub Releases 自动检查并安装更新；启动时也会在后台静默检查。
         </div>
       </div>
 

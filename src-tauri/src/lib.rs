@@ -86,6 +86,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![proxy_api, download_file])
         .setup(|app| {
             let show_i = MenuItem::with_id(app, "show", "显示主窗口", true, None::<&str>)?;

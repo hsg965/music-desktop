@@ -19,6 +19,7 @@
 - 无需登录
 - 单曲下载（可选音质，另存为本地文件）
 - **多套主题皮肤**（含丰富亮色），独立主题窗口切换；标题栏调色盘入口
+- **在线更新**（GitHub Releases + Tauri Updater，无需自建服务器）
 
 ## 技术栈
 
@@ -60,30 +61,66 @@ pnpm tauri:build
 
 仓库已配置 [`.github/workflows/release.yml`](.github/workflows/release.yml)：
 
-1. **上传代码到 GitHub**（开启 Actions 权限）
-2. **改版本号**（两处保持一致）：
+1. **上传代码到 GitHub**（开启 Actions 权限；仓库建议 **Public**，否则客户端无法匿名下载更新包）
+2. **配置更新签名 Secrets**（见下方「在线更新」）
+3. **改版本号**（两处保持一致）：
    - `package.json` → `"version"`
    - `src-tauri/tauri.conf.json` → `"version"`
    - （可选）`src-tauri/Cargo.toml` → `version`
-3. **打标签并推送**：
+4. **打标签并推送到 GitHub**（触发 Actions）：
 
 ```bash
 git add .
 git commit -m "release: v0.1.0"
 git tag v0.1.0
-git push origin main
-git push origin v0.1.0
+git push github main
+git push github v0.1.0
 ```
 
-4. 打开仓库 **Actions** 查看 `Release` 工作流
-5. 构建完成后到 **Releases** 下载：
-   - Windows：`.exe` / `.msi`
-   - macOS ARM：`aarch64` 的 `.dmg`
-   - macOS Intel：`x64` 的 `.dmg`
+5. 打开仓库 **Actions** 查看 `Release` 工作流
+6. 构建完成后到 **Releases** 下载：
+   - Windows：`.exe` / `.msi`（以及 updater 用的 `.nsis.zip` / `.sig`）
+   - macOS ARM：`aarch64` 的 `.dmg` / `.app.tar.gz`
+   - macOS Intel：`x64` 对应产物
+   - 清单：`latest.json`（客户端自动更新读取）
 
 也可在 **Actions → Release → Run workflow** 手动触发（可勾选草稿 Release）。
 
 > 首次使用请确认：仓库 **Settings → Actions → General** 中允许读写权限（Workflow permissions → Read and write）。
+
+### 在线更新（无需自建服务器）
+
+应用使用 [Tauri Updater](https://v2.tauri.app/plugin/updater/)，从 **GitHub Releases** 拉取 `latest.json` 与签名安装包：
+
+- 设置页 → **检查更新**
+- 启动约 4 秒后 **静默检查**（仅有新版本时弹窗）
+- 更新失败可打开 **GitHub Releases** 手动下载
+
+#### 一次性：签名密钥与 Secrets
+
+本机已生成过密钥时，私钥在 `src-tauri/.tauri-keys/`（该目录已 gitignore，**切勿提交**）。
+
+若需重新生成：
+
+```bash
+pnpm tauri signer generate -w src-tauri/.tauri-keys/music-desktop.key -p "你的密码" --ci -f
+```
+
+1. 将 **公钥** 内容写入 `src-tauri/tauri.conf.json` → `plugins.updater.pubkey`（与 `.key.pub` 一致）
+2. 在 GitHub 仓库 **Settings → Secrets and variables → Actions** 新增：
+   - `TAURI_SIGNING_PRIVATE_KEY`：私钥文件 **全文**（`music-desktop.key` 内容）
+   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`：生成密钥时的密码（无密码可留空或不设）
+3. 打 tag 发布后，Release 中应出现 `latest.json` 与 `.sig` 文件
+
+> **重要**：私钥或密码丢失后，旧客户端将无法校验新包签名，只能让用户重装并更换公钥。请备份私钥。
+
+#### 本地带签名打包（可选）
+
+```powershell
+$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content -Raw src-tauri/.tauri-keys/music-desktop.key
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "你的密码"
+pnpm tauri build
+```
 
 ## API
 

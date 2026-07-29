@@ -29,6 +29,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["nsis", "msi", "dmg", "app"],
     "icon": [
       "icons/32x32.png",
@@ -44,6 +45,14 @@
     },
     "macOS": {
       "minimumSystemVersion": "10.15"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE3QkIzODhGRjQ5RjRFNjcKUldSblRwLzBqemk3Rnl2SWpRaW13eWM2NGRVa2tKUSs4bURZbk5XNWorZlRSZ1dLak5rSE1kZHkK",
+      "endpoints": [
+        "https://github.com/hsg965/music-desktop/releases/latest/download/latest.json"
+      ]
     }
   }
 }
