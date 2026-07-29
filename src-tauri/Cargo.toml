@@ -1,6 +1,6 @@
 [package]
 name = "music-desktop"
-version = "0.1.0"
+version = "0.1.1"
 description = "Online music desktop player (Tauri + Vue3)"
 authors = ["hsg"]
 edition = "2021"
