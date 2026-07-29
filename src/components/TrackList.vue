@@ -8,7 +8,6 @@ const props = withDefaults(
     tracks: Track[];
     showIndex?: boolean;
     activeKey?: string;
-    /** 队列模式：显示移除而非加入 */
     removable?: boolean;
   }>(),
   {
@@ -42,20 +41,25 @@ function trackKey(t: Track) {
       :class="{ active: activeKey === trackKey(track) }"
       @dblclick="emit('play', track)"
     >
-      <div class="w-8 text-center text-xs text-white/35 tabular-nums">
+      <div
+        class="w-8 text-center text-xs tabular-nums"
+        style="color: var(--text-faint)"
+      >
         {{ props.showIndex ? i + 1 : "" }}
       </div>
       <div class="flex-1 min-w-0">
-        <div class="truncate text-sm text-white/90 group-[.active]:text-[#a89bff]">
+        <div class="truncate text-sm track-name">
           {{ track.name }}
         </div>
-        <div class="truncate text-xs text-white/40 mt-0.5">
+        <div class="truncate text-xs mt-0.5" style="color: var(--text-faint)">
           {{ artistText(track) }}
           <span v-if="track.album" class="mx-1 opacity-50">·</span>
           <span v-if="track.album">{{ track.album }}</span>
         </div>
       </div>
-      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div
+        class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+      >
         <NTooltip>
           <template #trigger>
             <NButton quaternary circle size="small" @click.stop="emit('play', track)">
@@ -74,7 +78,12 @@ function trackKey(t: Track) {
         </NTooltip>
         <NTooltip>
           <template #trigger>
-            <NButton quaternary circle size="small" @click.stop="emit('download', track)">
+            <NButton
+              quaternary
+              circle
+              size="small"
+              @click.stop="emit('download', track)"
+            >
               <Icon name="ri:download-2-line" :size="16" />
             </NButton>
           </template>
@@ -82,7 +91,12 @@ function trackKey(t: Track) {
         </NTooltip>
         <NTooltip v-if="removable">
           <template #trigger>
-            <NButton quaternary circle size="small" @click.stop="emit('remove', i)">
+            <NButton
+              quaternary
+              circle
+              size="small"
+              @click.stop="emit('remove', i)"
+            >
               <Icon name="ri:delete-bin-line" :size="16" />
             </NButton>
           </template>
@@ -99,12 +113,19 @@ function trackKey(t: Track) {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border);
   cursor: default;
-  transition: background 0.15s;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+  color: var(--text);
 }
-.track-row:hover,
-.track-row.active {
-  background: rgba(255, 255, 255, 0.04);
+/* 斑马/悬停由全局 tokens.css 统一，保证跟主题色 */
+.track-name {
+  color: var(--text);
+}
+.track-row.active .track-name {
+  color: var(--primary);
+  font-weight: 600;
 }
 </style>

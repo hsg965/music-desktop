@@ -14,6 +14,13 @@ export type MusicSource =
 /** 音质 br */
 export type Bitrate = 128 | 192 | 320 | 740 | 999;
 
+/**
+ * 搜索类别（对应 API source 用法）
+ * - song/artist：types=search&source=netease
+ * - album：types=search&source=netease_album（高级：专辑曲目）
+ */
+export type SearchKind = "song" | "artist" | "album";
+
 /** 搜索结果曲目 */
 export interface Track {
   id: string | number;
@@ -24,6 +31,8 @@ export interface Track {
   url_id?: string | number;
   lyric_id: string | number;
   source: MusicSource | string;
+  /** 来自哪种搜索类别 */
+  searchKind?: SearchKind;
   /** 运行时填充 */
   picUrl?: string;
   url?: string;

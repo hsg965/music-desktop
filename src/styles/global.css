@@ -1,10 +1,3 @@
-:root {
-  --bg: #121218;
-  --sider-bg: #16161e;
-  --bar-bg: #16161e;
-  color-scheme: dark;
-}
-
 html,
 body,
 #app {
@@ -14,6 +7,7 @@ body,
   height: 100%;
   overflow: hidden;
   background: var(--bg);
+  color: var(--text);
   font-family:
     "Segoe UI",
     "PingFang SC",
@@ -48,12 +42,146 @@ button {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--border-strong);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--text-faint);
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* 文本工具类（跟皮肤） */
+.text-skin {
+  color: var(--text);
+}
+.text-skin-muted {
+  color: var(--text-muted);
+}
+.text-skin-faint {
+  color: var(--text-faint);
+}
+.text-skin-primary {
+  color: var(--primary);
+}
+
+/*
+ * 按钮可读性：
+ * 默认态：文字颜色 = 边框颜色（主题色），背景透明，清晰可见
+ * 悬停态：实心主题色底 + 白字
+ */
+.n-button:not(.n-button--disabled) {
+  --n-text-color: var(--primary) !important;
+  --n-text-color-hover: #ffffff !important;
+  --n-text-color-pressed: #ffffff !important;
+  --n-text-color-focus: var(--primary) !important;
+  --n-text-color-disabled: var(--text-faint) !important;
+  --n-border: 1px solid var(--primary) !important;
+  --n-border-hover: 1px solid var(--primary) !important;
+  --n-border-pressed: 1px solid var(--primary-pressed) !important;
+  --n-border-focus: 1px solid var(--primary) !important;
+  --n-color: transparent !important;
+  --n-color-hover: var(--primary) !important;
+  --n-color-pressed: var(--primary-pressed) !important;
+  --n-color-focus: transparent !important;
+  --n-color-disabled: transparent !important;
+  --n-ripple-color: var(--primary) !important;
+}
+
+/* 圆形图标按钮（播放/下载等）：同样默认主题色，悬停实心 */
+.n-button--circle:not(.n-button--disabled),
+.n-button--quaternary-type:not(.n-button--disabled) {
+  --n-text-color: var(--primary) !important;
+  --n-text-color-hover: #ffffff !important;
+  --n-text-color-pressed: #ffffff !important;
+  --n-color: transparent !important;
+  --n-color-hover: var(--primary) !important;
+  --n-color-pressed: var(--primary-pressed) !important;
+  --n-border: 1px solid var(--primary) !important;
+  --n-border-hover: 1px solid var(--primary) !important;
+}
+
+/* 文字按钮（text）：无边框，默认主题色字 */
+.n-button--text-type:not(.n-button--disabled) {
+  --n-border: 1px solid transparent !important;
+  --n-border-hover: 1px solid transparent !important;
+  --n-text-color: var(--primary) !important;
+  --n-text-color-hover: var(--primary-hover) !important;
+  --n-color-hover: var(--primary-soft) !important;
+  --n-color: transparent !important;
+}
+
+/* 主色按钮与默认一致（避免白字+未上色背景看不清） */
+.n-button--primary-type:not(.n-button--disabled) {
+  --n-text-color: var(--primary) !important;
+  --n-text-color-hover: #ffffff !important;
+  --n-text-color-pressed: #ffffff !important;
+  --n-text-color-focus: var(--primary) !important;
+  --n-color: transparent !important;
+  --n-color-hover: var(--primary) !important;
+  --n-color-pressed: var(--primary-pressed) !important;
+  --n-border: 1px solid var(--primary) !important;
+  --n-border-hover: 1px solid var(--primary) !important;
+}
+
+/* 确保图标继承按钮文字色 */
+.n-button .inline-block {
+  color: inherit;
+}
+
+/* 通用弹窗/卡片：标题与正文用主题字色，避免浅色皮肤白字 */
+.n-card > .n-card-header .n-card-header__main {
+  color: var(--text) !important;
+}
+.n-card > .n-card__content {
+  color: var(--text);
+}
+.n-modal-body-wrapper .n-card {
+  color: var(--text);
+}
+.n-base-close .n-base-icon {
+  color: var(--text-muted) !important;
+}
+.n-base-close:hover .n-base-icon {
+  color: var(--text) !important;
+}
+.n-radio .n-radio__label {
+  color: var(--text);
+}
+
+/* 空状态文字跟主题 */
+.n-empty .n-empty__description {
+  color: var(--text-muted) !important;
+}
+
+/* 输入框：半透明玻璃，透出背景 */
+.n-input,
+.n-base-selection {
+  --n-color: rgba(255, 255, 255, 0.1) !important;
+  --n-color-focus: rgba(255, 255, 255, 0.16) !important;
+  --n-border: 1px solid var(--border) !important;
+  --n-border-hover: 1px solid var(--border-strong) !important;
+  --n-border-focus: 1px solid var(--primary) !important;
+  --n-text-color: var(--text) !important;
+  --n-placeholder-color: var(--text-faint) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+html[data-mode="light"] .n-input,
+html[data-mode="light"] .n-base-selection {
+  --n-color: rgba(255, 255, 255, 0.45) !important;
+  --n-color-focus: rgba(255, 255, 255, 0.62) !important;
+}
+
+/* Tag 历史标签：轻玻璃 */
+.n-tag {
+  --n-color: rgba(255, 255, 255, 0.12) !important;
+  --n-text-color: var(--text) !important;
+  --n-border: 1px solid var(--border) !important;
+}
+
+html[data-mode="light"] .n-tag {
+  --n-color: rgba(255, 255, 255, 0.5) !important;
 }

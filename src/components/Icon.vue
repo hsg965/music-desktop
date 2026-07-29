@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { Icon as IconifyIcon } from "@iconify/vue";
+import { Icon as IconifyIcon, addCollection } from "@iconify/vue";
+import { computed } from "vue";
+// 包入口导出 IconifyJSON，避免 json 路径在 pnpm/vite 下解析失败
+import { icons as riIcons } from "@iconify-json/ri";
 
-withDefaults(
+addCollection(riIcons);
+
+const props = withDefaults(
   defineProps<{
     name: string;
     size?: number | string;
@@ -9,8 +14,11 @@ withDefaults(
   }>(),
   {
     size: 18,
-    color: "currentColor",
   },
+);
+
+const iconStyle = computed(() =>
+  props.color ? { color: props.color } : undefined,
 );
 </script>
 
@@ -19,7 +27,7 @@ withDefaults(
     :icon="name.startsWith('ri:') ? name : `ri:${name}`"
     :width="size"
     :height="size"
-    :style="{ color }"
+    :style="iconStyle"
     class="inline-block shrink-0 align-middle"
   />
 </template>

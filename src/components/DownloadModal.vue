@@ -46,7 +46,6 @@ async function confirm() {
       message.info("已取消");
       return;
     }
-    // 先关弹窗，后台进下载列表
     emit("update:show", false);
     downloadStore.enqueue(props.track, br.value, path);
     message.success("已加入下载列表");
@@ -67,19 +66,20 @@ function artistText(t: Track) {
     :show="show"
     preset="card"
     title="下载歌曲"
+    class="download-modal"
     style="width: 420px"
     :mask-closable="!picking"
     :closable="!picking"
     @update:show="(v: boolean) => !picking && emit('update:show', v)"
   >
-    <div v-if="track" class="space-y-4">
+    <div v-if="track" class="space-y-4 download-modal-body">
       <div>
-        <div class="text-base text-white/90 font-medium">{{ track.name }}</div>
-        <div class="text-sm text-white/45 mt-1">{{ artistText(track) }}</div>
+        <div class="text-base font-medium track-title">{{ track.name }}</div>
+        <div class="text-sm mt-1 track-artist">{{ artistText(track) }}</div>
       </div>
 
       <div>
-        <div class="text-sm text-white/65 mb-2">选择音质</div>
+        <div class="text-sm mb-2 section-label">选择音质</div>
         <NRadioGroup v-model:value="br" :disabled="picking">
           <NSpace vertical>
             <NRadio
@@ -90,7 +90,7 @@ function artistText(t: Track) {
             />
           </NSpace>
         </NRadioGroup>
-        <div class="text-xs text-white/30 mt-2">
+        <div class="text-xs mt-2 hint-text">
           确认后选择保存位置，任务进入下载列表后台执行
         </div>
       </div>
@@ -106,3 +106,43 @@ function artistText(t: Track) {
     </template>
   </NModal>
 </template>
+
+<style scoped>
+.track-title {
+  color: var(--text);
+}
+.track-artist {
+  color: var(--text-muted);
+}
+.section-label {
+  color: var(--text-muted);
+}
+.hint-text {
+  color: var(--text-faint);
+}
+</style>
+
+<style>
+/* 弹窗标题/卡片正文跟随皮肤（含浅色主题） */
+.download-modal.n-card,
+.n-modal .download-modal {
+  --n-color: var(--surface-2, var(--bar-bg)) !important;
+  --n-title-text-color: var(--text) !important;
+  --n-text-color: var(--text) !important;
+  --n-border-color: var(--border) !important;
+  color: var(--text);
+}
+
+.download-modal .n-card-header__main,
+.download-modal .n-base-close {
+  color: var(--text) !important;
+}
+
+.download-modal .n-radio .n-radio__label {
+  color: var(--text) !important;
+}
+
+.download-modal .n-radio.n-radio--disabled .n-radio__label {
+  color: var(--text-faint) !important;
+}
+</style>

@@ -46,8 +46,10 @@ export async function openDesktopLyric() {
     const win = new WebviewWindow("lyric", {
       url: "/#/lyric",
       title: "桌面歌词",
-      width: 760,
-      height: 140,
+      width: 560,
+      height: 128,
+      minWidth: 360,
+      minHeight: 100,
       decorations: false,
       alwaysOnTop: true,
       resizable: true,
@@ -59,6 +61,38 @@ export async function openDesktopLyric() {
     return win;
   } catch (e) {
     console.warn("openDesktopLyric failed", e);
+    return null;
+  }
+}
+
+/** 独立主题选择窗口 */
+export async function openThemePicker() {
+  try {
+    const { WebviewWindow, getAllWebviewWindows } = await import(
+      "@tauri-apps/api/webviewWindow"
+    );
+    const existing = (await getAllWebviewWindows()).find((w) => w.label === "theme");
+    if (existing) {
+      await existing.show();
+      await existing.unminimize();
+      await existing.setFocus();
+      return existing;
+    }
+    const win = new WebviewWindow("theme", {
+      url: "/#/theme",
+      title: "主题皮肤",
+      width: 720,
+      height: 560,
+      minWidth: 560,
+      minHeight: 420,
+      decorations: false,
+      resizable: true,
+      center: true,
+      transparent: false,
+    });
+    return win;
+  } catch (e) {
+    console.warn("openThemePicker failed", e);
     return null;
   }
 }

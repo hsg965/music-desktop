@@ -1,0 +1,184 @@
+/* 默认 token（在 JS apply 前兜底） */
+:root {
+  --bg: #0f0f16;
+  --bg-grad: #0f0f16;
+  --sider-bg: rgba(18, 18, 28, 0.92);
+  --bar-bg: rgba(16, 16, 24, 0.94);
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --text: rgba(255, 255, 255, 0.92);
+  --text-muted: rgba(255, 255, 255, 0.55);
+  --text-faint: rgba(255, 255, 255, 0.32);
+  --primary: #8b7cf7;
+  --primary-hover: #a094ff;
+  --primary-pressed: #6f5fe0;
+  --primary-soft: rgba(139, 124, 247, 0.18);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --glow: 0 0 24px rgba(139, 124, 247, 0.25);
+  --player-height: 80px;
+  --sider-width: 160px;
+  --cover-radius: 12px;
+  --panel-blur: 0px;
+  --accent-secondary: #c4bbff;
+  --noise-opacity: 0.03;
+  --grid-opacity: 0;
+  /* 毛玻璃面板专用（可被主题覆盖） */
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-bg-light: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-blur: 18px;
+  color-scheme: dark;
+}
+
+/* 氛围背景层 —— 完整展示，面板透出来看 */
+.app-shell {
+  position: relative;
+  background: var(--bg-grad);
+  color: var(--text);
+  isolation: isolate;
+}
+
+.app-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--noise-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+html[data-layout="neon-rail"] .app-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--grid-opacity);
+  background-image:
+    linear-gradient(rgba(0, 229, 255, 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.35) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 20%, transparent 75%);
+}
+
+.app-shell > .theme-decor {
+  z-index: 0;
+}
+.app-shell > *:not(.theme-decor) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ========== 毛玻璃「独立白板」：半透明 + 模糊，透出底部主题 ========== */
+
+.skin-surface,
+.skin-panel {
+  position: relative;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border, var(--border-strong));
+  /* 深色默认：浅白半透明玻璃 */
+  background: var(--glass-bg, rgba(255, 255, 255, 0.08));
+  backdrop-filter: blur(var(--glass-blur, 18px)) saturate(1.35);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(1.35);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+
+/* 亮色主题：更亮的磨砂玻璃，仍能透出背景渐变/插画 */
+html[data-mode="light"] .skin-surface,
+html[data-mode="light"] .skin-panel {
+  background: var(--glass-bg-light, rgba(255, 255, 255, 0.52));
+  border-color: rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 6px 28px rgba(30, 40, 60, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(var(--glass-blur, 20px)) saturate(1.25);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(1.25);
+}
+
+/* 极细高光边，独立「板」感，不抢主题色 */
+.skin-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+html[data-mode="light"] .skin-panel::after {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* 列表行：干净、轻微分隔，透出玻璃底 */
+.track-list {
+  position: relative;
+  z-index: 0;
+  background: transparent;
+}
+
+.track-row {
+  border-bottom: 1px solid var(--border) !important;
+  background: transparent !important;
+}
+
+.track-row:nth-child(even) {
+  background: rgba(127, 127, 127, 0.04) !important;
+}
+
+html[data-mode="light"] .track-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.28) !important;
+}
+
+.track-row:hover {
+  background: rgba(127, 127, 127, 0.1) !important;
+  box-shadow: none !important;
+}
+
+html[data-mode="light"] .track-row:hover {
+  background: rgba(255, 255, 255, 0.45) !important;
+}
+
+.track-row.active {
+  background: var(--primary-soft) !important;
+  box-shadow: inset 3px 0 0 var(--primary) !important;
+}
+
+.track-row.active .track-name {
+  color: var(--primary) !important;
+  font-weight: 600;
+}
+
+/* 内容区外壳透明，让全局背景/插画铺满 */
+.layout-content {
+  background: transparent !important;
+}
+
+/* 有独立卡片布局时：同样用玻璃，而不是实心白 */
+html[data-layout="paper-split"] .layout-content,
+html[data-layout="glass-float"] .layout-content,
+html[data-layout="soft-dock"] .layout-content {
+  background: var(--glass-bg, rgba(255, 255, 255, 0.08)) !important;
+  border-color: var(--glass-border, var(--border)) !important;
+  backdrop-filter: blur(var(--glass-blur, 16px)) saturate(1.3) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(1.3) !important;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+html[data-mode="light"][data-layout="paper-split"] .layout-content,
+html[data-mode="light"][data-layout="glass-float"] .layout-content,
+html[data-mode="light"][data-layout="soft-dock"] .layout-content {
+  background: var(--glass-bg-light, rgba(255, 255, 255, 0.5)) !important;
+  border-color: rgba(255, 255, 255, 0.7) !important;
+}

@@ -10,33 +10,67 @@ import LyricPanel from "../components/LyricPanel.vue";
 import SettingsPanel from "../components/SettingsPanel.vue";
 import DownloadModal from "../components/DownloadModal.vue";
 import DownloadPanel from "../components/DownloadPanel.vue";
+import ThemeDecor from "../components/ThemeDecor.vue";
 import Icon from "../components/Icon.vue";
 import { usePlayerStore } from "../stores/player";
 import { useDownloadStore } from "../stores/download";
+import { useSettingsStore } from "../stores/settings";
 import { provideDownloadModal } from "../composables/useDownloadModal";
+import { getSkin } from "../themes/apply";
 
 const player = usePlayerStore();
 const downloadStore = useDownloadStore();
+const settings = useSettingsStore();
 const active = ref("search");
 const { show: downloadShow, track: downloadTrack } = provideDownloadModal();
+
+const skin = computed(() => getSkin(settings.skinId));
+const siderWidth = computed(() => {
+  const w = parseInt(skin.value.tokens["sider-width"], 10);
+  return Number.isFinite(w) ? w : 160;
+});
+const collapsedWidth = computed(() =>
+  skin.value.layout === "neon-rail" ? 72 : 64,
+);
 
 function renderIcon(name: string) {
   return () => h(Icon, { name, size: 18 });
 }
 
-const menuOptions = computed<MenuOption[]>(() => [
-  { label: "搜索", key: "search", icon: renderIcon("ri:search-line") },
-  { label: "队列", key: "queue", icon: renderIcon("ri:play-list-2-line") },
-  {
-    label: downloadStore.activeCount
-      ? `下载 (${downloadStore.activeCount})`
-      : "下载",
-    key: "download",
-    icon: renderIcon("ri:download-2-line"),
-  },
-  { label: "歌词", key: "lyric", icon: renderIcon("ri:file-music-line") },
-  { label: "设置", key: "settings", icon: renderIcon("ri:settings-3-line") },
-]);
+const menuOptions = computed<MenuOption[]>(() => {
+  const neon = skin.value.layout === "neon-rail";
+  return [
+    {
+      label: neon ? "" : "搜索",
+      key: "search",
+      icon: renderIcon("ri:search-line"),
+    },
+    {
+      label: neon ? "" : "队列",
+      key: "queue",
+      icon: renderIcon("ri:play-list-2-line"),
+    },
+    {
+      label: neon
+        ? ""
+        : downloadStore.activeCount
+          ? `下载 (${downloadStore.activeCount})`
+          : "下载",
+      key: "download",
+      icon: renderIcon("ri:download-2-line"),
+    },
+    {
+      label: neon ? "" : "歌词",
+      key: "lyric",
+      icon: renderIcon("ri:file-music-line"),
+    },
+    {
+      label: neon ? "" : "设置",
+      key: "settings",
+      icon: renderIcon("ri:settings-3-line"),
+    },
+  ];
+});
 
 function onKey(e: KeyboardEvent) {
   const tag = (e.target as HTMLElement)?.tagName;
@@ -63,27 +97,34 @@ onUnmounted(() => {
 
 <template>
   <NMessageProvider>
-    <div class="h-screen flex flex-col bg-[var(--bg)] text-white overflow-hidden">
+    <div class="app-shell h-screen flex flex-col overflow-hidden">
+      <ThemeDecor />
       <TitleBar />
-      <div class="flex-1 min-h-0 flex">
+      <div class="layout-body flex-1 min-h-0 flex">
         <NLayout has-sider class="h-full bg-transparent!">
           <NLayoutSider
             bordered
             collapse-mode="width"
-            :collapsed-width="64"
-            :width="160"
+            :collapsed-width="collapsedWidth"
+            :width="siderWidth"
+            :show-collapsed-content="true"
             :native-scrollbar="false"
-            class="bg-[var(--sider-bg)]!"
+            class="layout-sider"
+            :style="{
+              background: 'var(--sider-bg)',
+              borderColor: 'var(--border)',
+            }"
           >
             <NMenu
               v-model:value="active"
               :options="menuOptions"
-              :collapsed-width="64"
-              :collapsed-icon-size="20"
+              :collapsed="skin.layout === 'neon-rail'"
+              :collapsed-width="collapsedWidth"
+              :collapsed-icon-size="22"
               class="mt-2"
             />
           </NLayoutSider>
-          <div class="flex-1 min-w-0 min-h-0 overflow-hidden">
+          <div class="layout-content flex-1 min-w-0 min-h-0 overflow-hidden">
             <SearchPanel v-show="active === 'search'" />
             <QueuePanel v-show="active === 'queue'" />
             <DownloadPanel v-show="active === 'download'" />
@@ -96,7 +137,8 @@ onUnmounted(() => {
       <DownloadModal v-model:show="downloadShow" :track="downloadTrack" />
       <div
         v-if="player.error"
-        class="absolute bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-red-500/90 text-sm shadow-lg z-50"
+        class="absolute bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm shadow-lg z-50"
+        style="background: rgba(232, 17, 35, 0.92); color: #fff"
       >
         {{ player.error }}
       </div>

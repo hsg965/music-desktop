@@ -49,12 +49,18 @@ async function toggleLyricWin() {
 
 <template>
   <footer
-    class="player-bar h-20 px-4 flex items-center gap-4 border-t border-white/5 bg-[var(--bar-bg)]"
+    class="player-bar px-4 flex items-center gap-4 border-t"
+    style="
+      height: var(--player-height);
+      background: var(--bar-bg);
+      border-color: var(--border);
+      color: var(--text);
+    "
   >
-    <!-- 当前曲目 -->
-    <div class="w-56 flex items-center gap-3 min-w-0">
+    <div class="player-track-info w-56 flex items-center gap-3 min-w-0">
       <div
-        class="w-12 h-12 rounded-lg overflow-hidden bg-white/8 shrink-0 flex items-center justify-center"
+        class="player-cover w-12 h-12 shrink-0 flex items-center justify-center"
+        style="background: var(--surface-2)"
       >
         <img
           v-if="player.currentTrack?.picUrl"
@@ -62,13 +68,18 @@ async function toggleLyricWin() {
           class="w-full h-full object-cover"
           alt=""
         />
-        <Icon v-else name="ri:music-2-line" :size="22" color="rgba(255,255,255,0.25)" />
+        <Icon
+          v-else
+          name="ri:music-2-line"
+          :size="22"
+          color="var(--text-faint)"
+        />
       </div>
       <div class="min-w-0">
-        <div class="truncate text-sm text-white/90">
+        <div class="truncate text-sm" style="color: var(--text)">
           {{ player.currentTrack?.name || "未播放" }}
         </div>
-        <div class="truncate text-xs text-white/40 mt-0.5">
+        <div class="truncate text-xs mt-0.5" style="color: var(--text-faint)">
           {{ player.currentTrack ? artist : "搜索并选择一首歌" }}
         </div>
       </div>
@@ -88,7 +99,6 @@ async function toggleLyricWin() {
       <NSpin v-if="player.loading" :size="16" />
     </div>
 
-    <!-- 控制 -->
     <div class="flex-1 flex flex-col items-center gap-1 min-w-0">
       <div class="flex items-center gap-2">
         <NTooltip>
@@ -135,7 +145,10 @@ async function toggleLyricWin() {
         </NTooltip>
       </div>
       <div class="w-full max-w-xl flex items-center gap-2 px-2">
-        <span class="text-xs text-white/35 w-10 text-right tabular-nums">
+        <span
+          class="text-xs w-10 text-right tabular-nums"
+          style="color: var(--text-faint)"
+        >
           {{ formatTime(player.currentTime) }}
         </span>
         <NSlider
@@ -147,18 +160,17 @@ async function toggleLyricWin() {
           :tooltip="false"
           @update:value="onSeek"
         />
-        <span class="text-xs text-white/35 w-10 tabular-nums">
+        <span class="text-xs w-10 tabular-nums" style="color: var(--text-faint)">
           {{ formatTime(player.duration) }}
         </span>
       </div>
     </div>
 
-    <!-- 音量 -->
     <div class="w-36 flex items-center gap-2">
       <Icon
         :name="settings.volume === 0 ? 'ri:volume-mute-line' : 'ri:volume-up-line'"
         :size="16"
-        color="rgba(255,255,255,0.5)"
+        color="var(--text-muted)"
       />
       <NSlider
         :value="settings.volume"

@@ -35,9 +35,9 @@ function clear() {
 <template>
   <div class="h-full flex flex-col gap-3 p-4">
     <div class="flex items-center justify-between">
-      <div class="text-sm text-white/70">
+      <div class="text-sm" style="color: var(--text-muted)">
         播放队列
-        <span class="text-white/35 ml-1">({{ player.queue.length }})</span>
+        <span class="ml-1" style="color: var(--text-faint)">({{ player.queue.length }})</span>
       </div>
       <NButton
         size="small"
@@ -52,7 +52,7 @@ function clear() {
       </NButton>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-auto rounded-xl bg-white/3 border border-white/5">
+    <div class="flex-1 min-h-0 overflow-auto skin-panel">
       <TrackList
         v-if="player.queue.length"
         :tracks="player.queue"

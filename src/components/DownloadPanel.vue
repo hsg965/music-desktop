@@ -38,12 +38,12 @@ function shortPath(p: string) {
 <template>
   <div class="h-full flex flex-col gap-3 p-4">
     <div class="flex items-center justify-between gap-2">
-      <div class="text-sm text-white/70">
+      <div class="text-sm" style="color: var(--text-muted)">
         下载列表
-        <span v-if="store.activeCount" class="text-[#a89bff] ml-1">
+        <span v-if="store.activeCount" class="ml-1" style="color: var(--primary)">
           ({{ store.activeCount }} 进行中)
         </span>
-        <span v-else class="text-white/35 ml-1">({{ store.tasks.length }})</span>
+        <span v-else class="ml-1" style="color: var(--text-faint)">({{ store.tasks.length }})</span>
       </div>
       <div class="flex gap-1">
         <NButton
@@ -57,25 +57,25 @@ function shortPath(p: string) {
       </div>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-auto rounded-xl bg-white/3 border border-white/5">
+    <div class="flex-1 min-h-0 overflow-auto skin-panel">
       <template v-if="store.tasks.length">
         <div
           v-for="task in store.tasks"
           :key="task.id"
-          class="flex items-start gap-3 px-3 py-3 border-b border-white/5"
+          class="dl-row flex items-start gap-3 px-3 py-3"
         >
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-sm text-white/90 truncate">{{ task.track.name }}</span>
+              <span class="text-sm truncate" style="color: var(--text)">{{ task.track.name }}</span>
               <NTag size="tiny" :type="statusMeta(task.status).type" :bordered="false">
                 {{ statusMeta(task.status).label }}
               </NTag>
-              <span class="text-xs text-white/30">{{ brLabel(task.br) }}</span>
+              <span class="text-xs" style="color: var(--text-faint)">{{ brLabel(task.br) }}</span>
             </div>
-            <div class="text-xs text-white/40 mt-0.5 truncate">
+            <div class="text-xs mt-0.5 truncate" style="color: var(--text-muted)">
               {{ artistText(task.track.artist) }}
             </div>
-            <div class="text-xs text-white/25 mt-1 truncate" :title="task.path">
+            <div class="text-xs mt-1 truncate" style="color: var(--text-faint)" :title="task.path">
               {{ shortPath(task.path) }}
             </div>
             <div v-if="task.error" class="text-xs text-red-400/90 mt-1 break-all">
@@ -103,7 +103,8 @@ function shortPath(p: string) {
               v-else
               name="ri:loader-4-line"
               :size="18"
-              class="animate-spin text-[#a89bff] m-1"
+              class="animate-spin m-1"
+              color="var(--primary)"
             />
           </div>
         </div>
@@ -114,3 +115,22 @@ function shortPath(p: string) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.dl-row {
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+.dl-row:nth-child(even) {
+  background: rgba(127, 127, 127, 0.04);
+}
+.dl-row:hover {
+  background: rgba(127, 127, 127, 0.1);
+}
+html[data-mode="light"] .dl-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.28);
+}
+html[data-mode="light"] .dl-row:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+</style>

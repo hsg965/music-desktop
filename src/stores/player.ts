@@ -107,21 +107,33 @@ export const usePlayerStore = defineStore("player", () => {
 
   function scheduleBroadcast() {
     if (broadcastTimer != null) return;
+    // 桌面歌词跟唱需要较及时的进度
     broadcastTimer = window.setTimeout(() => {
       broadcastTimer = null;
       broadcastState();
-    }, 400);
+    }, 80);
   }
 
   async function resolveTrackMedia(track: Track): Promise<boolean> {
     loading.value = true;
     error.value = "";
     try {
-      const [urlRes, pic, lyric] = await Promise.all([
-        fetchPlayUrl(track.id, track.source, settings.bitrate),
-        fetchPicUrl(track.pic_id, track.source, 500),
+      // 已有数据尽量复用，减少接口次数（配合缓存 + 限流）
+      const tasks: [
+        Promise<{ url: string } | null>,
+        Promise<string>,
+        Promise<{ lyric: string; tlyric?: string }>,
+      ] = [
+        track.url
+          ? Promise.resolve({ url: track.url })
+          : fetchPlayUrl(track.id, track.source, settings.bitrate),
+        track.picUrl
+          ? Promise.resolve(track.picUrl)
+          : fetchPicUrl(track.pic_id, track.source, 500),
         fetchLyric(track.lyric_id, track.source),
-      ]);
+      ];
+
+      const [urlRes, pic, lyric] = await Promise.all(tasks);
 
       if (!urlRes?.url) {
         error.value = "无法获取播放地址（可能无版权或音源不可用）";
@@ -129,7 +141,7 @@ export const usePlayerStore = defineStore("player", () => {
       }
 
       track.url = urlRes.url;
-      track.picUrl = pic;
+      track.picUrl = pic || track.picUrl;
       lyricText.value = lyric.lyric || "";
       tlyricText.value = lyric.tlyric || "";
       return true;

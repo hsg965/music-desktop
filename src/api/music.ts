@@ -4,11 +4,25 @@ import type {
   LyricResult,
   MusicSource,
   PicResult,
+  SearchKind,
   Track,
   UrlResult,
 } from "../types/music";
+import {
+  cacheKey,
+  cachedRequest,
+  getRateLimitStatus,
+} from "./rateLimit";
 
 const BASE = "https://music-api.gdstudio.xyz/api.php";
+
+/** 缓存 TTL */
+const TTL = {
+  search: 10 * 60 * 1000,
+  url: 8 * 60 * 1000,
+  pic: 30 * 60 * 1000,
+  lyric: 30 * 60 * 1000,
+};
 
 function isTauri(): boolean {
   return (
@@ -18,49 +32,96 @@ function isTauri(): boolean {
   );
 }
 
-async function apiGet<T>(params: Record<string, string | number>): Promise<T> {
+async function rawApiGet<T>(params: Record<string, string | number>): Promise<T> {
   const query: Record<string, string> = {};
   for (const [k, v] of Object.entries(params)) {
     query[k] = String(v);
   }
 
-  // 桌面端走 Rust 代理，规避 WebView CORS
   if (isTauri()) {
     const { invoke } = await import("@tauri-apps/api/core");
     return await invoke<T>("proxy_api", { params: query });
   }
 
-  // 浏览器预览回退
   return ofetch<T>(BASE, {
     query,
     timeout: 20000,
   });
 }
 
-/** 搜索歌曲 */
+async function apiGet<T>(
+  params: Record<string, string | number>,
+  ttlMs: number,
+): Promise<T> {
+  const key = cacheKey(
+    Object.fromEntries(
+      Object.entries(params).map(([k, v]) => [k, String(v)]),
+    ),
+  );
+  return cachedRequest(key, ttlMs, () => rawApiGet<T>(params));
+}
+
+/**
+ * 按搜索类别解析 API 的 source 参数
+ * 文档：在音乐源后加 `_album`（如 netease_album）获取专辑相关曲目列表
+ */
+export function resolveSearchSource(
+  source: string,
+  kind: SearchKind = "song",
+): string {
+  const base = String(source || "netease").replace(/_album$/i, "");
+  if (kind === "album") return `${base}_album`;
+  return base;
+}
+
+/** 搜索（单曲 / 歌手关键词 / 专辑曲目） */
 export async function searchTracks(options: {
   name: string;
   source?: MusicSource | string;
+  /** 搜索类别：单曲 | 歌手 | 专辑 */
+  kind?: SearchKind;
   count?: number;
   pages?: number;
 }): Promise<Track[]> {
-  const { name, source = "netease", count = 20, pages = 1 } = options;
-  const data = await apiGet<Track[] | { data?: Track[] } | null>({
-    types: "search",
-    source,
+  const {
     name,
-    count,
-    pages,
-  });
+    source = "netease",
+    kind = "song",
+    count = 20,
+    pages = 1,
+  } = options;
 
-  if (Array.isArray(data)) return normalizeTracks(data, source);
+  const apiSource = resolveSearchSource(source, kind);
+  const data = await apiGet<Track[] | { data?: Track[] } | null>(
+    {
+      types: "search",
+      source: apiSource,
+      name,
+      count,
+      pages,
+    },
+    TTL.search,
+  );
+
+  // 回落展示用的 source（去掉 _album）
+  const displaySource = String(source).replace(/_album$/i, "") || "netease";
+
+  if (Array.isArray(data)) return normalizeTracks(data, displaySource, kind);
   if (data && Array.isArray((data as { data?: Track[] }).data)) {
-    return normalizeTracks((data as { data: Track[] }).data, source);
+    return normalizeTracks(
+      (data as { data: Track[] }).data,
+      displaySource,
+      kind,
+    );
   }
   return [];
 }
 
-function normalizeTracks(list: Track[], fallbackSource: string): Track[] {
+function normalizeTracks(
+  list: Track[],
+  fallbackSource: string,
+  kind: SearchKind = "song",
+): Track[] {
   return list.map((t) => ({
     ...t,
     id: t.id,
@@ -74,6 +135,8 @@ function normalizeTracks(list: Track[], fallbackSource: string): Track[] {
     pic_id: t.pic_id,
     lyric_id: t.lyric_id ?? t.id,
     source: (t.source || fallbackSource) as MusicSource,
+    // 保留搜索类别，便于 UI 展示
+    searchKind: kind,
   }));
 }
 
@@ -84,15 +147,19 @@ export async function fetchPlayUrl(
   br: Bitrate = 320,
 ): Promise<UrlResult | null> {
   try {
-    const data = await apiGet<UrlResult | null>({
-      types: "url",
-      source,
-      id: String(id),
-      br,
-    });
+    const data = await apiGet<UrlResult | null>(
+      {
+        types: "url",
+        source: String(source).replace(/_album$/i, ""),
+        id: String(id),
+        br,
+      },
+      TTL.url,
+    );
     if (data && data.url) return data;
     return null;
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("过于频繁")) throw e;
     return null;
   }
 }
@@ -104,14 +171,18 @@ export async function fetchPicUrl(
   size: 300 | 500 = 300,
 ): Promise<string> {
   try {
-    const data = await apiGet<PicResult | null>({
-      types: "pic",
-      source,
-      id: String(picId),
-      size,
-    });
+    const data = await apiGet<PicResult | null>(
+      {
+        types: "pic",
+        source: String(source).replace(/_album$/i, ""),
+        id: String(picId),
+        size,
+      },
+      TTL.pic,
+    );
     return data?.url || "";
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("过于频繁")) throw e;
     return "";
   }
 }
@@ -122,19 +193,25 @@ export async function fetchLyric(
   source: string = "netease",
 ): Promise<LyricResult> {
   try {
-    const data = await apiGet<LyricResult | null>({
-      types: "lyric",
-      source,
-      id: String(lyricId),
-    });
+    const data = await apiGet<LyricResult | null>(
+      {
+        types: "lyric",
+        source: String(source).replace(/_album$/i, ""),
+        id: String(lyricId),
+      },
+      TTL.lyric,
+    );
     return {
       lyric: data?.lyric || "",
       tlyric: data?.tlyric || "",
     };
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("过于频繁")) throw e;
     return { lyric: "", tlyric: "" };
   }
 }
+
+export { getRateLimitStatus };
 
 export const MUSIC_SOURCES: { label: string; value: MusicSource }[] = [
   { label: "网易云", value: "netease" },
@@ -147,6 +224,20 @@ export const MUSIC_SOURCES: { label: string; value: MusicSource }[] = [
   { label: "JOOX", value: "joox" },
   { label: "Tidal", value: "tidal" },
   { label: "Qobuz", value: "qobuz" },
+];
+
+export const SEARCH_KINDS: {
+  label: string;
+  value: SearchKind;
+  hint: string;
+}[] = [
+  { label: "单曲", value: "song", hint: "按歌名搜索曲目" },
+  { label: "歌手", value: "artist", hint: "按歌手名搜索其作品" },
+  {
+    label: "专辑",
+    value: "album",
+    hint: "专辑模式（source 加 _album，返回专辑相关曲目）",
+  },
 ];
 
 export const BITRATE_OPTIONS: { label: string; value: Bitrate }[] = [

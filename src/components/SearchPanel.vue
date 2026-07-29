@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { computed, ref, onMounted, watch } from "vue";
 import {
   NButton,
   NEmpty,
@@ -8,10 +8,12 @@ import {
   NSpin,
   NPagination,
   NTag,
+  NRadioGroup,
+  NRadioButton,
   useMessage,
 } from "naive-ui";
-import { MUSIC_SOURCES, searchTracks } from "../api/music";
-import type { Track } from "../types/music";
+import { MUSIC_SOURCES, SEARCH_KINDS, searchTracks } from "../api/music";
+import type { SearchKind, Track } from "../types/music";
 import { useSettingsStore } from "../stores/settings";
 import { usePlayerStore } from "../stores/player";
 import TrackList from "./TrackList.vue";
@@ -38,14 +40,46 @@ const pageSize = 20;
 const hasMore = ref(false);
 const history = ref<string[]>([]);
 const inputFocused = ref(false);
+/** 搜索类别：单曲 / 歌手 / 专辑 */
+const searchKind = ref<SearchKind>("song");
 
 const sourceOptions = MUSIC_SOURCES.map((s) => ({
   label: s.label,
   value: s.value,
 }));
 
+const kindMeta = computed(
+  () => SEARCH_KINDS.find((k) => k.value === searchKind.value) ?? SEARCH_KINDS[0],
+);
+
+const placeholder = computed(() => {
+  if (searchKind.value === "artist") return "输入歌手名，如：周杰伦";
+  if (searchKind.value === "album") return "输入专辑名或关键词";
+  return "输入歌曲名 / 关键词";
+});
+
+const emptyDesc = computed(() => {
+  if (history.value.length) return "输入关键词搜索，或点击历史记录";
+  return kindMeta.value.hint;
+});
+
+const resultUnit = computed(() =>
+  searchKind.value === "album" ? "首（专辑曲目）" : "首",
+);
+
 onMounted(() => {
   history.value = loadSearchHistory();
+});
+
+// 切换类别后，若已有关键词则自动重搜
+watch(searchKind, () => {
+  if (keyword.value.trim() && (results.value.length || page.value > 1)) {
+    doSearch(true, false);
+  } else {
+    results.value = [];
+    page.value = 1;
+    hasMore.value = false;
+  }
 });
 
 async function doSearch(resetPage = true, fromHistory = false) {
@@ -61,16 +95,22 @@ async function doSearch(resetPage = true, fromHistory = false) {
     const list = await searchTracks({
       name,
       source: settings.source,
+      kind: searchKind.value,
       count: pageSize,
       pages: page.value,
     });
     results.value = list;
     hasMore.value = list.length >= pageSize;
-    // 仅在新搜索时记历史（分页不重复写）
     if (resetPage || fromHistory) {
       history.value = pushSearchHistory(name, history.value);
     }
-    if (!list.length) message.info("没有找到相关歌曲");
+    if (!list.length) {
+      message.info(
+        searchKind.value === "album"
+          ? "未找到相关专辑曲目，可换关键词或音源试试"
+          : "没有找到相关结果",
+      );
+    }
   } catch (e) {
     message.error(e instanceof Error ? e.message : "搜索失败");
     results.value = [];
@@ -97,7 +137,6 @@ function onInputFocus() {
 }
 
 function onInputBlur() {
-  // 延迟，便于点击历史标签
   window.setTimeout(() => {
     inputFocused.value = false;
   }, 200);
@@ -141,6 +180,21 @@ function addAllToQueue() {
 
 <template>
   <div class="h-full flex flex-col gap-3 p-4">
+    <!-- 搜索类别：单曲 / 歌手 / 专辑 -->
+    <div class="flex flex-wrap items-center gap-2">
+      <NRadioGroup v-model:value="searchKind" size="small" name="search-kind">
+        <NRadioButton
+          v-for="k in SEARCH_KINDS"
+          :key="k.value"
+          :value="k.value"
+          :label="k.label"
+        />
+      </NRadioGroup>
+      <span class="text-xs" style="color: var(--text-faint)">
+        {{ kindMeta.hint }}
+      </span>
+    </div>
+
     <div class="flex flex-wrap items-center gap-2">
       <NSelect
         v-model:value="settings.source"
@@ -150,7 +204,7 @@ function addAllToQueue() {
       />
       <NInput
         v-model:value="keyword"
-        placeholder="搜索歌曲 / 歌手 / 专辑"
+        :placeholder="placeholder"
         clearable
         class="flex-1 min-w-48"
         @keydown.enter="doSearch()"
@@ -158,20 +212,20 @@ function addAllToQueue() {
         @blur="onInputBlur"
       >
         <template #prefix>
-          <Icon name="ri:search-line" :size="16" color="rgba(255,255,255,0.45)" />
+          <Icon name="ri:search-line" :size="16" color="var(--primary)" />
         </template>
       </NInput>
-      <NButton type="primary" :loading="loading" @click="doSearch()">
+      <NButton type="primary" strong secondary :loading="loading" @click="doSearch()">
         搜索
       </NButton>
     </div>
 
-    <!-- 搜索历史：最多 10 条 -->
+    <!-- 搜索历史 -->
     <div
       v-if="history.length && (inputFocused || !results.length)"
       class="flex flex-wrap items-center gap-2 px-0.5"
     >
-      <span class="text-xs text-white/35 shrink-0">历史</span>
+      <span class="text-xs shrink-0" style="color: var(--text-muted)">历史</span>
       <NTag
         v-for="item in history"
         :key="item"
@@ -184,7 +238,7 @@ function addAllToQueue() {
       >
         {{ item }}
       </NTag>
-      <NButton text size="tiny" class="text-white/35!" @click="clearHistory">
+      <NButton text size="tiny" style="color: var(--text-muted)" @click="clearHistory">
         清空
       </NButton>
     </div>
@@ -193,8 +247,13 @@ function addAllToQueue() {
       v-if="results.length"
       class="flex flex-wrap items-center gap-2 px-0.5"
     >
+      <NTag size="small" round :bordered="false" style="background: var(--primary-soft)">
+        {{ kindMeta.label }}
+      </NTag>
       <NButton
         type="primary"
+        strong
+        secondary
         size="small"
         :loading="playingAll"
         @click="playAllResults"
@@ -210,10 +269,12 @@ function addAllToQueue() {
         </template>
         全部加入队列
       </NButton>
-      <span class="text-xs text-white/35">共 {{ results.length }} 首</span>
+      <span class="text-xs" style="color: var(--text-muted)">
+        共 {{ results.length }} {{ resultUnit }}
+      </span>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-auto rounded-xl bg-white/3 border border-white/5">
+    <div class="flex-1 min-h-0 overflow-auto skin-panel">
       <NSpin :show="loading" class="h-full min-h-60">
         <TrackList
           v-if="results.length"
@@ -223,13 +284,7 @@ function addAllToQueue() {
           @download="openDownload"
         />
         <div v-else class="h-60 flex items-center justify-center">
-          <NEmpty
-            :description="
-              history.length
-                ? '输入关键词搜索，或点击历史记录'
-                : '输入关键词搜索在线音乐'
-            "
-          />
+          <NEmpty :description="emptyDesc" />
         </div>
       </NSpin>
     </div>
