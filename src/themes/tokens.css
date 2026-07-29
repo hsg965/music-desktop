@@ -90,7 +90,9 @@ html[data-layout="neon-rail"] .app-shell::after {
   box-shadow:
     0 4px 24px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  /* 不裁切内部滚动；由子元素 overflow-y-auto 负责 */
   overflow: hidden;
+  min-height: 0;
 }
 
 /* 亮色主题：更亮的磨砂玻璃，仍能透出背景渐变/插画 */

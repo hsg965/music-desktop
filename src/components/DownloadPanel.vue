@@ -36,8 +36,8 @@ function shortPath(p: string) {
 </script>
 
 <template>
-  <div class="h-full flex flex-col gap-3 p-4">
-    <div class="flex items-center justify-between gap-2">
+  <div class="download-root h-full min-h-0 flex flex-col gap-3 p-4">
+    <div class="flex items-center justify-between gap-2 shrink-0">
       <div class="text-sm" style="color: var(--text-muted)">
         下载列表
         <span v-if="store.activeCount" class="ml-1" style="color: var(--primary)">
@@ -57,66 +57,80 @@ function shortPath(p: string) {
       </div>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-auto skin-panel">
-      <template v-if="store.tasks.length">
-        <div
-          v-for="task in store.tasks"
-          :key="task.id"
-          class="dl-row flex items-start gap-3 px-3 py-3"
-        >
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-sm truncate" style="color: var(--text)">{{ task.track.name }}</span>
-              <NTag size="tiny" :type="statusMeta(task.status).type" :bordered="false">
-                {{ statusMeta(task.status).label }}
-              </NTag>
-              <span class="text-xs" style="color: var(--text-faint)">{{ brLabel(task.br) }}</span>
+    <div class="list-shell flex-1 min-h-0 skin-panel flex flex-col">
+      <div class="list-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <template v-if="store.tasks.length">
+          <div
+            v-for="task in store.tasks"
+            :key="task.id"
+            class="dl-row flex items-start gap-3 px-3 py-3"
+          >
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-sm truncate" style="color: var(--text)">{{ task.track.name }}</span>
+                <NTag size="tiny" :type="statusMeta(task.status).type" :bordered="false">
+                  {{ statusMeta(task.status).label }}
+                </NTag>
+                <span class="text-xs" style="color: var(--text-faint)">{{ brLabel(task.br) }}</span>
+              </div>
+              <div class="text-xs mt-0.5 truncate" style="color: var(--text-muted)">
+                {{ artistText(task.track.artist) }}
+              </div>
+              <div class="text-xs mt-1 truncate" style="color: var(--text-faint)" :title="task.path">
+                {{ shortPath(task.path) }}
+              </div>
+              <div v-if="task.error" class="text-xs text-red-400/90 mt-1 break-all">
+                {{ task.error }}
+              </div>
             </div>
-            <div class="text-xs mt-0.5 truncate" style="color: var(--text-muted)">
-              {{ artistText(task.track.artist) }}
-            </div>
-            <div class="text-xs mt-1 truncate" style="color: var(--text-faint)" :title="task.path">
-              {{ shortPath(task.path) }}
-            </div>
-            <div v-if="task.error" class="text-xs text-red-400/90 mt-1 break-all">
-              {{ task.error }}
+            <div class="flex items-center gap-0.5 shrink-0">
+              <NTooltip v-if="task.status === 'failed'">
+                <template #trigger>
+                  <NButton quaternary circle size="small" @click="store.retry(task.id)">
+                    <Icon name="ri:refresh-line" :size="16" />
+                  </NButton>
+                </template>
+                重试
+              </NTooltip>
+              <NTooltip v-if="task.status !== 'downloading'">
+                <template #trigger>
+                  <NButton quaternary circle size="small" @click="store.remove(task.id)">
+                    <Icon name="ri:close-line" :size="16" />
+                  </NButton>
+                </template>
+                移除
+              </NTooltip>
+              <Icon
+                v-else
+                name="ri:loader-4-line"
+                :size="18"
+                class="animate-spin m-1"
+                color="var(--primary)"
+              />
             </div>
           </div>
-          <div class="flex items-center gap-0.5 shrink-0">
-            <NTooltip v-if="task.status === 'failed'">
-              <template #trigger>
-                <NButton quaternary circle size="small" @click="store.retry(task.id)">
-                  <Icon name="ri:refresh-line" :size="16" />
-                </NButton>
-              </template>
-              重试
-            </NTooltip>
-            <NTooltip v-if="task.status !== 'downloading'">
-              <template #trigger>
-                <NButton quaternary circle size="small" @click="store.remove(task.id)">
-                  <Icon name="ri:close-line" :size="16" />
-                </NButton>
-              </template>
-              移除
-            </NTooltip>
-            <Icon
-              v-else
-              name="ri:loader-4-line"
-              :size="18"
-              class="animate-spin m-1"
-              color="var(--primary)"
-            />
-          </div>
+        </template>
+        <div v-else class="h-60 flex items-center justify-center">
+          <NEmpty description="暂无下载任务，在歌曲旁点下载即可" />
         </div>
-      </template>
-      <div v-else class="h-60 flex items-center justify-center">
-        <NEmpty description="暂无下载任务，在歌曲旁点下载即可" />
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.download-root {
+  box-sizing: border-box;
+}
+
+.list-shell {
+  min-height: 0;
+}
+
+.list-scroll {
+  overscroll-behavior: contain;
+}
+
 .dl-row {
   border-bottom: 1px solid var(--border);
   background: transparent;

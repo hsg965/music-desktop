@@ -32,38 +32,52 @@ watch(activeIndex, (idx) => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col p-4">
-    <div class="text-sm mb-3" style="color: var(--text-muted)">歌词</div>
-    <div
-      ref="listRef"
-      class="flex-1 min-h-0 overflow-y-auto skin-panel px-4 py-8"
-    >
-      <template v-if="lines.length">
-        <div
-          v-for="(line, i) in lines"
-          :key="`${line.time}-${i}`"
-          :data-i="i"
-          class="lyric-line text-center py-2 transition-all duration-300"
-          :class="i === activeIndex ? 'active' : ''"
-        >
-          <div>{{ line.text || " " }}</div>
-          <div v-if="tlyricAt(line.time)" class="text-xs mt-1 opacity-60">
-            {{ tlyricAt(line.time) }}
-          </div>
-        </div>
-      </template>
+  <div class="lyric-root h-full min-h-0 flex flex-col p-4">
+    <div class="text-sm mb-3 shrink-0" style="color: var(--text-muted)">歌词</div>
+    <div class="list-shell flex-1 min-h-0 skin-panel flex flex-col">
       <div
-        v-else
-        class="h-full flex items-center justify-center text-sm"
-        style="color: var(--text-faint)"
+        ref="listRef"
+        class="list-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-8"
       >
-        {{ player.currentTrack ? "暂无歌词" : "播放歌曲后显示歌词" }}
+        <template v-if="lines.length">
+          <div
+            v-for="(line, i) in lines"
+            :key="`${line.time}-${i}`"
+            :data-i="i"
+            class="lyric-line text-center py-2 transition-all duration-300"
+            :class="i === activeIndex ? 'active' : ''"
+          >
+            <div>{{ line.text || " " }}</div>
+            <div v-if="tlyricAt(line.time)" class="text-xs mt-1 opacity-60">
+              {{ tlyricAt(line.time) }}
+            </div>
+          </div>
+        </template>
+        <div
+          v-else
+          class="h-full min-h-60 flex items-center justify-center text-sm"
+          style="color: var(--text-faint)"
+        >
+          {{ player.currentTrack ? "暂无歌词" : "播放歌曲后显示歌词" }}
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.lyric-root {
+  box-sizing: border-box;
+}
+
+.list-shell {
+  min-height: 0;
+}
+
+.list-scroll {
+  overscroll-behavior: contain;
+}
+
 .lyric-line {
   color: var(--text-faint);
   font-size: 14px;

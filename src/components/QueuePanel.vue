@@ -33,8 +33,8 @@ function clear() {
 </script>
 
 <template>
-  <div class="h-full flex flex-col gap-3 p-4">
-    <div class="flex items-center justify-between">
+  <div class="queue-root h-full min-h-0 flex flex-col gap-3 p-4">
+    <div class="flex items-center justify-between shrink-0">
       <div class="text-sm" style="color: var(--text-muted)">
         播放队列
         <span class="ml-1" style="color: var(--text-faint)">({{ player.queue.length }})</span>
@@ -52,19 +52,35 @@ function clear() {
       </NButton>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-auto skin-panel">
-      <TrackList
-        v-if="player.queue.length"
-        :tracks="player.queue"
-        :active-key="activeKey"
-        removable
-        @play="onPlay"
-        @remove="onRemove"
-        @download="openDownload"
-      />
-      <div v-else class="h-60 flex items-center justify-center">
-        <NEmpty description="队列为空，去搜索添加歌曲吧" />
+    <div class="list-shell flex-1 min-h-0 skin-panel flex flex-col">
+      <div class="list-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <TrackList
+          v-if="player.queue.length"
+          :tracks="player.queue"
+          :active-key="activeKey"
+          removable
+          @play="onPlay"
+          @remove="onRemove"
+          @download="openDownload"
+        />
+        <div v-else class="h-60 flex items-center justify-center">
+          <NEmpty description="队列为空，去搜索添加歌曲吧" />
+        </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.queue-root {
+  box-sizing: border-box;
+}
+
+.list-shell {
+  min-height: 0;
+}
+
+.list-scroll {
+  overscroll-behavior: contain;
+}
+</style>

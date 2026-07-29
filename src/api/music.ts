@@ -4,7 +4,6 @@ import type {
   LyricResult,
   MusicSource,
   PicResult,
-  SearchKind,
   Track,
   UrlResult,
 } from "../types/music";
@@ -61,37 +60,26 @@ async function apiGet<T>(
   return cachedRequest(key, ttlMs, () => rawApiGet<T>(params));
 }
 
-/**
- * 按搜索类别解析 API 的 source 参数
- * 文档：在音乐源后加 `_album`（如 netease_album）获取专辑相关曲目列表
- */
-export function resolveSearchSource(
-  source: string,
-  kind: SearchKind = "song",
-): string {
-  const base = String(source || "netease").replace(/_album$/i, "");
-  if (kind === "album") return `${base}_album`;
-  return base;
+/** 规范化音源参数（去掉历史 _album 后缀） */
+export function resolveSearchSource(source: string): string {
+  return String(source || "netease").replace(/_album$/i, "");
 }
 
-/** 搜索（单曲 / 歌手关键词 / 专辑曲目） */
+/** 搜索曲目 */
 export async function searchTracks(options: {
   name: string;
   source?: MusicSource | string;
-  /** 搜索类别：单曲 | 歌手 | 专辑 */
-  kind?: SearchKind;
   count?: number;
   pages?: number;
 }): Promise<Track[]> {
   const {
     name,
     source = "netease",
-    kind = "song",
     count = 20,
     pages = 1,
   } = options;
 
-  const apiSource = resolveSearchSource(source, kind);
+  const apiSource = resolveSearchSource(source);
   const data = await apiGet<Track[] | { data?: Track[] } | null>(
     {
       types: "search",
@@ -103,25 +91,14 @@ export async function searchTracks(options: {
     TTL.search,
   );
 
-  // 回落展示用的 source（去掉 _album）
-  const displaySource = String(source).replace(/_album$/i, "") || "netease";
-
-  if (Array.isArray(data)) return normalizeTracks(data, displaySource, kind);
+  if (Array.isArray(data)) return normalizeTracks(data, apiSource);
   if (data && Array.isArray((data as { data?: Track[] }).data)) {
-    return normalizeTracks(
-      (data as { data: Track[] }).data,
-      displaySource,
-      kind,
-    );
+    return normalizeTracks((data as { data: Track[] }).data, apiSource);
   }
   return [];
 }
 
-function normalizeTracks(
-  list: Track[],
-  fallbackSource: string,
-  kind: SearchKind = "song",
-): Track[] {
+function normalizeTracks(list: Track[], fallbackSource: string): Track[] {
   return list.map((t) => ({
     ...t,
     id: t.id,
@@ -135,8 +112,6 @@ function normalizeTracks(
     pic_id: t.pic_id,
     lyric_id: t.lyric_id ?? t.id,
     source: (t.source || fallbackSource) as MusicSource,
-    // 保留搜索类别，便于 UI 展示
-    searchKind: kind,
   }));
 }
 
@@ -224,20 +199,6 @@ export const MUSIC_SOURCES: { label: string; value: MusicSource }[] = [
   { label: "JOOX", value: "joox" },
   { label: "Tidal", value: "tidal" },
   { label: "Qobuz", value: "qobuz" },
-];
-
-export const SEARCH_KINDS: {
-  label: string;
-  value: SearchKind;
-  hint: string;
-}[] = [
-  { label: "单曲", value: "song", hint: "按歌名搜索曲目" },
-  { label: "歌手", value: "artist", hint: "按歌手名搜索其作品" },
-  {
-    label: "专辑",
-    value: "album",
-    hint: "专辑模式（source 加 _album，返回专辑相关曲目）",
-  },
 ];
 
 export const BITRATE_OPTIONS: { label: string; value: Bitrate }[] = [

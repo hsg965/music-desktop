@@ -1,2 +1,7 @@
+# 单包项目：必须声明 packages，否则 pnpm store/install 报
+# "packages field missing or empty"
+packages:
+  - "."
+
 allowBuilds:
   esbuild: true

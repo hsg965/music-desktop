@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from "vue";
+import { computed, ref, onMounted } from "vue";
 import {
   NButton,
   NEmpty,
@@ -8,12 +8,10 @@ import {
   NSpin,
   NPagination,
   NTag,
-  NRadioGroup,
-  NRadioButton,
   useMessage,
 } from "naive-ui";
-import { MUSIC_SOURCES, SEARCH_KINDS, searchTracks } from "../api/music";
-import type { SearchKind, Track } from "../types/music";
+import { MUSIC_SOURCES, searchTracks } from "../api/music";
+import type { Track } from "../types/music";
 import { useSettingsStore } from "../stores/settings";
 import { usePlayerStore } from "../stores/player";
 import TrackList from "./TrackList.vue";
@@ -38,48 +36,22 @@ const results = ref<Track[]>([]);
 const page = ref(1);
 const pageSize = 20;
 const hasMore = ref(false);
+const itemCount = ref(0);
 const history = ref<string[]>([]);
 const inputFocused = ref(false);
-/** 搜索类别：单曲 / 歌手 / 专辑 */
-const searchKind = ref<SearchKind>("song");
 
 const sourceOptions = MUSIC_SOURCES.map((s) => ({
   label: s.label,
   value: s.value,
 }));
 
-const kindMeta = computed(
-  () => SEARCH_KINDS.find((k) => k.value === searchKind.value) ?? SEARCH_KINDS[0],
-);
-
-const placeholder = computed(() => {
-  if (searchKind.value === "artist") return "输入歌手名，如：周杰伦";
-  if (searchKind.value === "album") return "输入专辑名或关键词";
-  return "输入歌曲名 / 关键词";
-});
-
 const emptyDesc = computed(() => {
   if (history.value.length) return "输入关键词搜索，或点击历史记录";
-  return kindMeta.value.hint;
+  return "输入歌曲名 / 歌手 / 关键词搜索";
 });
-
-const resultUnit = computed(() =>
-  searchKind.value === "album" ? "首（专辑曲目）" : "首",
-);
 
 onMounted(() => {
   history.value = loadSearchHistory();
-});
-
-// 切换类别后，若已有关键词则自动重搜
-watch(searchKind, () => {
-  if (keyword.value.trim() && (results.value.length || page.value > 1)) {
-    doSearch(true, false);
-  } else {
-    results.value = [];
-    page.value = 1;
-    hasMore.value = false;
-  }
 });
 
 async function doSearch(resetPage = true, fromHistory = false) {
@@ -89,31 +61,35 @@ async function doSearch(resetPage = true, fromHistory = false) {
     return;
   }
   if (resetPage) page.value = 1;
+
   loading.value = true;
   inputFocused.value = false;
   try {
     const list = await searchTracks({
       name,
       source: settings.source,
-      kind: searchKind.value,
       count: pageSize,
       pages: page.value,
     });
     results.value = list;
     hasMore.value = list.length >= pageSize;
+    if (!hasMore.value) {
+      itemCount.value = (page.value - 1) * pageSize + list.length;
+    } else {
+      itemCount.value = page.value * pageSize + 1;
+    }
+
     if (resetPage || fromHistory) {
       history.value = pushSearchHistory(name, history.value);
     }
     if (!list.length) {
-      message.info(
-        searchKind.value === "album"
-          ? "未找到相关专辑曲目，可换关键词或音源试试"
-          : "没有找到相关结果",
-      );
+      message.info("没有找到相关结果");
     }
   } catch (e) {
     message.error(e instanceof Error ? e.message : "搜索失败");
     results.value = [];
+    itemCount.value = 0;
+    hasMore.value = false;
   } finally {
     loading.value = false;
   }
@@ -121,7 +97,7 @@ async function doSearch(resetPage = true, fromHistory = false) {
 
 function searchFromHistory(item: string) {
   keyword.value = item;
-  doSearch(true, true);
+  void doSearch(true, true);
 }
 
 function removeHistory(item: string) {
@@ -143,8 +119,9 @@ function onInputBlur() {
 }
 
 function onPageChange(p: number) {
+  if (p === page.value) return;
   page.value = p;
-  doSearch(false);
+  void doSearch(false);
 }
 
 async function onPlay(track: Track) {
@@ -179,34 +156,19 @@ function addAllToQueue() {
 </script>
 
 <template>
-  <div class="h-full flex flex-col gap-3 p-4">
-    <!-- 搜索类别：单曲 / 歌手 / 专辑 -->
-    <div class="flex flex-wrap items-center gap-2">
-      <NRadioGroup v-model:value="searchKind" size="small" name="search-kind">
-        <NRadioButton
-          v-for="k in SEARCH_KINDS"
-          :key="k.value"
-          :value="k.value"
-          :label="k.label"
-        />
-      </NRadioGroup>
-      <span class="text-xs" style="color: var(--text-faint)">
-        {{ kindMeta.hint }}
-      </span>
-    </div>
-
-    <div class="flex flex-wrap items-center gap-2">
+  <div class="search-root h-full min-h-0 flex flex-col gap-3 p-4">
+    <div class="flex flex-wrap items-center gap-2 shrink-0">
       <NSelect
         v-model:value="settings.source"
         :options="sourceOptions"
-        class="w-36!"
+        class="w-32!"
         size="medium"
       />
       <NInput
         v-model:value="keyword"
-        :placeholder="placeholder"
+        placeholder="输入歌曲名 / 歌手 / 关键词"
         clearable
-        class="flex-1 min-w-48"
+        class="flex-1 min-w-40"
         @keydown.enter="doSearch()"
         @focus="onInputFocus"
         @blur="onInputBlur"
@@ -220,10 +182,9 @@ function addAllToQueue() {
       </NButton>
     </div>
 
-    <!-- 搜索历史 -->
     <div
       v-if="history.length && (inputFocused || !results.length)"
-      class="flex flex-wrap items-center gap-2 px-0.5"
+      class="flex flex-wrap items-center gap-2 px-0.5 shrink-0"
     >
       <span class="text-xs shrink-0" style="color: var(--text-muted)">历史</span>
       <NTag
@@ -245,11 +206,8 @@ function addAllToQueue() {
 
     <div
       v-if="results.length"
-      class="flex flex-wrap items-center gap-2 px-0.5"
+      class="flex flex-wrap items-center gap-2 px-0.5 shrink-0"
     >
-      <NTag size="small" round :bordered="false" style="background: var(--primary-soft)">
-        {{ kindMeta.label }}
-      </NTag>
       <NButton
         type="primary"
         strong
@@ -270,30 +228,35 @@ function addAllToQueue() {
         全部加入队列
       </NButton>
       <span class="text-xs" style="color: var(--text-muted)">
-        共 {{ results.length }} {{ resultUnit }}
+        本页 {{ results.length }} 首
       </span>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-auto skin-panel">
-      <NSpin :show="loading" class="h-full min-h-60">
-        <TrackList
-          v-if="results.length"
-          :tracks="results"
-          @play="onPlay"
-          @add="onAdd"
-          @download="openDownload"
-        />
-        <div v-else class="h-60 flex items-center justify-center">
-          <NEmpty :description="emptyDesc" />
-        </div>
-      </NSpin>
+    <div class="list-shell flex-1 min-h-0 skin-panel flex flex-col">
+      <div class="list-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <NSpin :show="loading" class="min-h-60 w-full">
+          <TrackList
+            v-if="results.length"
+            :tracks="results"
+            @play="onPlay"
+            @add="onAdd"
+            @download="openDownload"
+          />
+          <div v-else class="h-60 flex items-center justify-center">
+            <NEmpty :description="emptyDesc" />
+          </div>
+        </NSpin>
+      </div>
     </div>
 
-    <div v-if="results.length" class="flex justify-end">
+    <div
+      v-if="itemCount > 0 && results.length"
+      class="flex justify-end shrink-0 pt-1"
+    >
       <NPagination
-        v-model:page="page"
+        :page="page"
         :page-size="pageSize"
-        :item-count="hasMore ? page * pageSize + 1 : page * pageSize"
+        :item-count="itemCount"
         :page-slot="5"
         size="small"
         @update:page="onPageChange"
@@ -301,3 +264,17 @@ function addAllToQueue() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.search-root {
+  box-sizing: border-box;
+}
+
+.list-shell {
+  min-height: 0;
+}
+
+.list-scroll {
+  overscroll-behavior: contain;
+}
+</style>
