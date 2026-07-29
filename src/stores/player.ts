@@ -2,9 +2,18 @@ import { defineStore } from "pinia";
 import { computed, ref, watch } from "vue";
 import { fetchLyric, fetchPicUrl, fetchPlayUrl } from "../api/music";
 import type { PlayMode, PlayerSnapshot, Track } from "../types/music";
+import {
+  cacheRemoteAudio,
+  findCachedAudioPath,
+  isRemoteMediaUrl,
+  toPlayableSrc,
+} from "../utils/audioCache";
 import { useSettingsStore } from "./settings";
 
 const QUEUE_KEY = "music-desktop-queue";
+
+/** 后台缓存进行中，避免同一首歌重复下载 */
+const cachingKeys = new Set<string>();
 
 function loadQueue(): Track[] {
   try {
@@ -114,36 +123,69 @@ export const usePlayerStore = defineStore("player", () => {
     }, 80);
   }
 
+  function scheduleCacheRemote(
+    track: Track,
+    br: number,
+    remoteUrl: string,
+  ) {
+    const key = `${track.source}-${track.id}-${br}`;
+    if (!isRemoteMediaUrl(remoteUrl) || cachingKeys.has(key)) return;
+    cachingKeys.add(key);
+    void cacheRemoteAudio(track.source, track.id, br, remoteUrl).finally(() => {
+      cachingKeys.delete(key);
+    });
+  }
+
   async function resolveTrackMedia(track: Track): Promise<boolean> {
     loading.value = true;
     error.value = "";
     try {
-      // 已有数据尽量复用，减少接口次数（配合缓存 + 限流）
-      const tasks: [
-        Promise<{ url: string } | null>,
-        Promise<string>,
-        Promise<{ lyric: string; tlyric?: string }>,
-      ] = [
-        track.url
-          ? Promise.resolve({ url: track.url })
-          : fetchPlayUrl(track.id, track.source, settings.bitrate),
+      const br = settings.bitrate;
+
+      // 1) 优先使用安装目录 cache_dir 中的本地音频
+      const cachedPath = await findCachedAudioPath(track.source, track.id, br);
+      let playUrl: string | null = null;
+      let remoteForCache: string | null = null;
+
+      if (cachedPath) {
+        playUrl = await toPlayableSrc(cachedPath);
+      } else {
+        // 2) 远程：队列里已有 http(s) 链则复用，否则请求 API
+        const existingRemote = isRemoteMediaUrl(track.url) ? track.url! : null;
+        const urlRes = existingRemote
+          ? { url: existingRemote }
+          : await fetchPlayUrl(track.id, track.source, br);
+        if (!urlRes?.url) {
+          error.value = "无法获取播放地址（可能无版权或音源不可用）";
+          return false;
+        }
+        playUrl = urlRes.url;
+        remoteForCache = urlRes.url;
+      }
+
+      // 封面 / 歌词并行（与音频缓存无关）
+      const [pic, lyric] = await Promise.all([
         track.picUrl
           ? Promise.resolve(track.picUrl)
           : fetchPicUrl(track.pic_id, track.source, 500),
         fetchLyric(track.lyric_id, track.source),
-      ];
+      ]);
 
-      const [urlRes, pic, lyric] = await Promise.all(tasks);
-
-      if (!urlRes?.url) {
+      if (!playUrl) {
         error.value = "无法获取播放地址（可能无版权或音源不可用）";
         return false;
       }
 
-      track.url = urlRes.url;
+      track.url = playUrl;
       track.picUrl = pic || track.picUrl;
       lyricText.value = lyric.lyric || "";
       tlyricText.value = lyric.tlyric || "";
+
+      // 3) 首次在线播放：后台写入 cache_dir，下次直接本地播
+      if (remoteForCache) {
+        scheduleCacheRemote(track, br, remoteForCache);
+      }
+
       return true;
     } catch (e) {
       error.value = e instanceof Error ? e.message : "加载失败";

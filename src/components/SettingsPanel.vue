@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import { NSelect, NSlider, NSwitch, NDivider, NButton } from "naive-ui";
+import {
+  NSelect,
+  NSlider,
+  NSwitch,
+  NDivider,
+  NButton,
+  useMessage,
+} from "naive-ui";
 import { BITRATE_OPTIONS, MUSIC_SOURCES, getRateLimitStatus } from "../api/music";
 import {
   DEFAULT_LYRIC_LOOKAHEAD,
@@ -14,9 +21,14 @@ import {
   closeWindowByLabel,
 } from "../utils/windows";
 import { useUpdater } from "../composables/useUpdater";
+import {
+  clearAudioCache,
+  getAudioCacheStats,
+} from "../utils/audioCache";
 
 const settings = useSettingsStore();
 const player = usePlayerStore();
+const message = useMessage();
 const {
   currentVersion,
   phase,
@@ -28,6 +40,44 @@ const {
 
 const rate = ref(getRateLimitStatus());
 let rateTimer: number | null = null;
+
+const cachePath = ref("");
+const cacheFileCount = ref(0);
+const cacheTotalBytes = ref(0);
+const cacheBusy = ref(false);
+
+function formatBytes(n: number) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
+async function refreshCacheStats() {
+  const stats = await getAudioCacheStats();
+  if (!stats) {
+    cachePath.value = "";
+    cacheFileCount.value = 0;
+    cacheTotalBytes.value = 0;
+    return;
+  }
+  cachePath.value = stats.path;
+  cacheFileCount.value = stats.fileCount;
+  cacheTotalBytes.value = stats.totalBytes;
+}
+
+async function onClearCache() {
+  cacheBusy.value = true;
+  try {
+    const n = await clearAudioCache();
+    await refreshCacheStats();
+    message.success(n > 0 ? `已清除 ${n} 个缓存文件` : "缓存目录为空");
+  } catch {
+    message.error("清除缓存失败");
+  } finally {
+    cacheBusy.value = false;
+  }
+}
 
 // 兼容热更新/旧缓存：避免 lyricLookAhead 为空导致整页崩溃
 const lookAheadValue = computed(() => {
@@ -48,6 +98,7 @@ onMounted(() => {
     // ignore
   }
   void loadCurrentVersion();
+  void refreshCacheStats();
   rateTimer = window.setInterval(() => {
     rate.value = getRateLimitStatus();
   }, 1000);
@@ -205,6 +256,45 @@ function onLookAhead(v: number) {
             </div>
           </div>
           <NSwitch :value="settings.miniPlayer" @update:value="onMiniPlayer" />
+        </div>
+      </div>
+
+      <NDivider title-placement="left">本地缓存</NDivider>
+
+      <div class="max-w-md space-y-3">
+        <div class="text-sm space-y-1" style="color: var(--text-muted)">
+          <div>
+            已缓存
+            <b style="color: var(--text)">{{ cacheFileCount }}</b>
+            首 ·
+            <b style="color: var(--text)">{{ formatBytes(cacheTotalBytes) }}</b>
+          </div>
+          <div
+            v-if="cachePath"
+            class="text-xs break-all"
+            style="color: var(--text-faint)"
+          >
+            目录：{{ cachePath }}
+          </div>
+          <div v-else class="text-xs" style="color: var(--text-faint)">
+            目录：安装目录/cache_dir/audio（仅桌面端）
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <NButton secondary :loading="cacheBusy" @click="refreshCacheStats">
+            刷新
+          </NButton>
+          <NButton
+            type="warning"
+            secondary
+            :loading="cacheBusy"
+            @click="onClearCache"
+          >
+            清空音频缓存
+          </NButton>
+        </div>
+        <div class="text-xs" style="color: var(--text-faint)">
+          播放过的歌曲会自动下载到本地；再次播放同一音质时不再请求音频流。
         </div>
       </div>
 
