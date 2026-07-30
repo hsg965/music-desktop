@@ -116,6 +116,86 @@ fn ext_from_content_type(ct: &str) -> Option<&'static str> {
     }
 }
 
+/// 规范化播放直链（协议相对路径等）
+fn normalize_media_url(url: &str) -> String {
+    let u = url.trim();
+    if u.starts_with("//") {
+        format!("https:{u}")
+    } else {
+        u.to_string()
+    }
+}
+
+/// 按音源补 Referer，降低 CDN 403 概率
+fn referer_for_source(source: &str) -> &'static str {
+    let s = source.to_ascii_lowercase();
+    if s.contains("netease") {
+        "https://music.163.com/"
+    } else if s.contains("tencent") || s.contains("qq") {
+        "https://y.qq.com/"
+    } else if s.contains("kuwo") {
+        "https://www.kuwo.cn/"
+    } else if s.contains("kugou") {
+        "https://www.kugou.com/"
+    } else if s.contains("bilibili") {
+        "https://www.bilibili.com/"
+    } else if s.contains("migu") {
+        "https://music.migu.cn/"
+    } else {
+        "https://music.gdstudio.xyz/"
+    }
+}
+
+async fn download_bytes_with_headers(
+    url: &str,
+    source: &str,
+) -> Result<(Vec<u8>, String), String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(180))
+        .redirect(reqwest::redirect::Policy::limited(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let referer = referer_for_source(source);
+    let resp = client
+        .get(url)
+        .header("User-Agent", UA)
+        .header("Accept", "*/*")
+        .header("Referer", referer)
+        .header("Origin", referer.trim_end_matches('/'))
+        .send()
+        .await
+        .map_err(|e| format!("缓存下载失败: {e}"))?;
+
+    if !resp.status().is_success() {
+        return Err(format!("缓存下载 HTTP {}", resp.status()));
+    }
+
+    let content_type = resp
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+
+    let bytes = resp
+        .bytes()
+        .await
+        .map_err(|e| format!("读取音频失败: {e}"))?;
+    if bytes.is_empty() {
+        return Err("缓存内容为空".into());
+    }
+    // 过小可能是错误页/JSON，不当作音频
+    if bytes.len() < 2048 {
+        let head = String::from_utf8_lossy(&bytes[..bytes.len().min(200)]);
+        if head.contains('<') || head.contains('{') || head.contains("error") {
+            return Err(format!("缓存响应不像音频文件（{} 字节）", bytes.len()));
+        }
+    }
+
+    Ok((bytes.to_vec(), content_type))
+}
+
 /// 代理 GD Studio API，规避 WebView CORS
 #[tauri::command]
 async fn proxy_api(params: HashMap<String, String>) -> Result<Value, String> {
@@ -156,31 +236,8 @@ async fn download_file(url: String, path: String) -> Result<(), String> {
         }
     }
 
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    let resp = client
-        .get(&url)
-        .header("User-Agent", UA)
-        .send()
-        .await
-        .map_err(|e| format!("请求失败: {e}"))?;
-
-    if !resp.status().is_success() {
-        return Err(format!("下载 HTTP {}", resp.status()));
-    }
-
-    let bytes = resp
-        .bytes()
-        .await
-        .map_err(|e| format!("读取内容失败: {e}"))?;
-
-    if bytes.is_empty() {
-        return Err("下载内容为空".into());
-    }
-
+    let url = normalize_media_url(&url);
+    let (bytes, _) = download_bytes_with_headers(&url, "netease").await?;
     std::fs::write(&dest, &bytes).map_err(|e| format!("写入文件失败: {e}"))?;
     Ok(())
 }
@@ -210,9 +267,10 @@ async fn cache_audio_file(
     if url.trim().is_empty() {
         return Err("下载地址为空".into());
     }
-    // 仅允许 http(s)
+
+    let url = normalize_media_url(&url);
     if !(url.starts_with("http://") || url.starts_with("https://")) {
-        return Err("仅支持 http(s) 音频地址".into());
+        return Err(format!("仅支持 http(s) 音频地址，当前: {url}"));
     }
 
     let dir = audio_cache_dir()?;
@@ -221,28 +279,7 @@ async fn cache_audio_file(
         return Ok(existing.to_string_lossy().into_owned());
     }
 
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(180))
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    let resp = client
-        .get(&url)
-        .header("User-Agent", UA)
-        .send()
-        .await
-        .map_err(|e| format!("缓存下载失败: {e}"))?;
-
-    if !resp.status().is_success() {
-        return Err(format!("缓存下载 HTTP {}", resp.status()));
-    }
-
-    let content_type = resp
-        .headers()
-        .get(reqwest::header::CONTENT_TYPE)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("")
-        .to_string();
+    let (bytes, content_type) = download_bytes_with_headers(&url, &source).await?;
 
     let ext = ext_from_url(&url)
         .or_else(|| ext_from_content_type(&content_type))
@@ -251,17 +288,8 @@ async fn cache_audio_file(
     let final_path = dir.join(format!("{stem}.{ext}"));
     let part_path = dir.join(format!("{stem}.{ext}.part"));
 
-    let bytes = resp
-        .bytes()
-        .await
-        .map_err(|e| format!("读取音频失败: {e}"))?;
-    if bytes.is_empty() {
-        return Err("缓存内容为空".into());
-    }
-
     // 下载期间若已被其它任务写好，直接复用
     if let Some(existing) = find_existing_cache_file(&dir, &stem) {
-        let _ = std::fs::remove_file(&part_path);
         return Ok(existing.to_string_lossy().into_owned());
     }
 
@@ -270,9 +298,20 @@ async fn cache_audio_file(
         let _ = std::fs::remove_file(&final_path);
     }
     if let Err(e) = std::fs::rename(&part_path, &final_path) {
+        // 部分环境 rename 失败时直接 copy
+        if let Err(e2) = std::fs::copy(&part_path, &final_path) {
+            let _ = std::fs::remove_file(&part_path);
+            return Err(format!("写入缓存失败: {e}; {e2}"));
+        }
         let _ = std::fs::remove_file(&part_path);
-        return Err(format!("写入缓存失败: {e}"));
     }
+
+    eprintln!(
+        "[audio-cache] saved {} ({} bytes) from {}",
+        final_path.display(),
+        bytes.len(),
+        url
+    );
 
     Ok(final_path.to_string_lossy().into_owned())
 }

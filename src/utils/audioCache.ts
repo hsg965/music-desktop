@@ -13,7 +13,9 @@ function isTauri(): boolean {
 
 export function isRemoteMediaUrl(url: string | undefined | null): boolean {
   if (!url) return false;
-  return /^https?:\/\//i.test(url) && !/asset\.localhost/i.test(url);
+  const u = url.trim();
+  if (/asset\.localhost/i.test(u) || u.startsWith("asset:")) return false;
+  return /^(https?:)?\/\//i.test(u);
 }
 
 /** 查询本地缓存文件绝对路径（无则 null） */
@@ -35,6 +37,12 @@ export async function findCachedAudioPath(
   }
 }
 
+function normalizeRemoteUrl(url: string): string {
+  const u = url.trim();
+  if (u.startsWith("//")) return `https:${u}`;
+  return u;
+}
+
 /** 把远程音频下载到 cache_dir（已存在则直接返回路径） */
 export async function cacheRemoteAudio(
   source: string,
@@ -42,16 +50,24 @@ export async function cacheRemoteAudio(
   br: number,
   url: string,
 ): Promise<string | null> {
-  if (!isTauri() || !isRemoteMediaUrl(url)) return null;
+  if (!isTauri()) return null;
+  const normalized = normalizeRemoteUrl(url);
+  if (!isRemoteMediaUrl(normalized)) {
+    console.warn("[audio-cache] skip non-http url:", url);
+    return null;
+  }
   try {
     const { invoke } = await import("@tauri-apps/api/core");
-    return await invoke<string>("cache_audio_file", {
+    const path = await invoke<string>("cache_audio_file", {
       source: String(source),
       id: String(id),
-      br,
-      url,
+      br: Math.round(Number(br)) || 320,
+      url: normalized,
     });
-  } catch {
+    console.info("[audio-cache] ok:", path);
+    return path;
+  } catch (e) {
+    console.warn("[audio-cache] failed:", e);
     return null;
   }
 }

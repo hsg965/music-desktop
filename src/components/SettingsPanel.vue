@@ -6,12 +6,16 @@ import {
   NSwitch,
   NDivider,
   NButton,
+  NColorPicker,
+  NRadioGroup,
+  NRadio,
   useMessage,
 } from "naive-ui";
 import { BITRATE_OPTIONS, MUSIC_SOURCES, getRateLimitStatus } from "../api/music";
 import {
   DEFAULT_LYRIC_LOOKAHEAD,
   useSettingsStore,
+  type DesktopLyricColorMode,
 } from "../stores/settings";
 import { usePlayerStore } from "../stores/player";
 import {
@@ -144,6 +148,18 @@ function onLookAhead(v: number) {
     // ignore
   }
 }
+
+function onLyricColorMode(v: DesktopLyricColorMode) {
+  settings.setDesktopLyricColorMode(v);
+}
+
+function onLyricColor(v: string) {
+  settings.setDesktopLyricColor(v);
+}
+
+function onLyricFontSize(v: number) {
+  settings.setDesktopLyricFontSize(v);
+}
 </script>
 
 <template>
@@ -221,6 +237,54 @@ function onLookAhead(v: number) {
           <div class="text-xs mt-2" style="color: var(--text-faint)">
             LRC 时间戳多为开唱点。数值越大，句子越早显示；0 为严格按时间戳切换。
             影响主界面歌词与桌面歌词。默认 0.9 秒。
+          </div>
+        </div>
+
+        <div>
+          <div class="text-sm mb-2" style="color: var(--text-muted)">
+            桌面歌词颜色
+          </div>
+          <NRadioGroup
+            :value="settings.desktopLyricColorMode"
+            name="desktop-lyric-color-mode"
+            @update:value="onLyricColorMode"
+          >
+            <NRadio value="theme">跟随主题色</NRadio>
+            <NRadio value="custom">自定义颜色</NRadio>
+          </NRadioGroup>
+          <div
+            v-if="settings.desktopLyricColorMode === 'custom'"
+            class="mt-3 flex items-center gap-3"
+          >
+            <NColorPicker
+              :value="settings.desktopLyricColor"
+              :show-alpha="false"
+              :modes="['hex']"
+              style="width: 200px"
+              @update:value="onLyricColor"
+            />
+            <span class="text-xs" style="color: var(--text-faint)">
+              {{ settings.desktopLyricColor }}
+            </span>
+          </div>
+          <div class="text-xs mt-2" style="color: var(--text-faint)">
+            未悬停时显示在桌面上；「跟随主题」使用当前皮肤主色并带描边，避免看不清。
+          </div>
+        </div>
+
+        <div>
+          <div class="text-sm mb-2" style="color: var(--text-muted)">
+            桌面歌词字号 {{ settings.desktopLyricFontSize }} px
+          </div>
+          <NSlider
+            :value="settings.desktopLyricFontSize"
+            :min="14"
+            :max="56"
+            :step="1"
+            @update:value="onLyricFontSize"
+          />
+          <div class="text-xs mt-2" style="color: var(--text-faint)">
+            仅影响桌面歌词悬浮窗；主界面歌词字号不变。
           </div>
         </div>
       </div>

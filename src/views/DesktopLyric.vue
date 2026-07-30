@@ -5,14 +5,20 @@ import { findLyricIndex, parseLrc } from "../utils/lrc";
 import Icon from "../components/Icon.vue";
 import { applySkin } from "../themes/apply";
 import {
+  DEFAULT_DESKTOP_LYRIC_COLOR,
+  DEFAULT_DESKTOP_LYRIC_FONT_SIZE,
   DEFAULT_LYRIC_LOOKAHEAD,
-  readLyricLookAheadFromStorage,
+  readDesktopLyricAppearanceFromStorage,
+  type DesktopLyricColorMode,
 } from "../stores/settings";
 
 const state = ref<PlayerSnapshot | null>(null);
 const hovered = ref(false);
 /** 与主窗口设置同步的提前量（秒） */
 const lyricLookAhead = ref(DEFAULT_LYRIC_LOOKAHEAD);
+const colorMode = ref<DesktopLyricColorMode>("theme");
+const customColor = ref(DEFAULT_DESKTOP_LYRIC_COLOR);
+const fontSize = ref(DEFAULT_DESKTOP_LYRIC_FONT_SIZE);
 let unlisten: (() => void) | null = null;
 let skinTimer: number | null = null;
 
@@ -57,6 +63,31 @@ const artist = computed(() => {
   return a?.length ? a.join(" / ") : "";
 });
 
+/** 未悬停时歌词主色：主题主色 或 自定义色 */
+const idleMainColor = computed(() => {
+  if (colorMode.value === "custom") return customColor.value;
+  return "var(--primary)";
+});
+
+const idleTransColor = computed(() => {
+  if (colorMode.value === "custom") {
+    // 半透明自定义色
+    const c = customColor.value;
+    if (c.startsWith("#") && (c.length === 7 || c.length === 4)) {
+      return c.length === 7 ? `${c}cc` : c;
+    }
+    return c;
+  }
+  return "var(--primary)";
+});
+
+const lyricStyle = computed(() => ({
+  "--lyric-main-size": `${fontSize.value}px`,
+  "--lyric-trans-size": `${Math.max(12, Math.round(fontSize.value * 0.55))}px`,
+  "--lyric-idle-main": idleMainColor.value,
+  "--lyric-idle-trans": idleTransColor.value,
+}));
+
 async function emitCmd(cmd: string) {
   try {
     const { emit } = await import("@tauri-apps/api/event");
@@ -77,12 +108,12 @@ async function closeWin() {
 
 function syncFromStorage() {
   try {
-    const raw = localStorage.getItem("music-desktop-settings");
-    if (raw) {
-      const data = JSON.parse(raw) as { skinId?: string };
-      if (data.skinId) applySkin(data.skinId);
-    }
-    lyricLookAhead.value = readLyricLookAheadFromStorage();
+    const app = readDesktopLyricAppearanceFromStorage();
+    if (app.skinId) applySkin(app.skinId);
+    lyricLookAhead.value = app.lyricLookAhead;
+    colorMode.value = app.colorMode;
+    customColor.value = app.color;
+    fontSize.value = app.fontSize;
   } catch {
     // ignore
   }
@@ -92,7 +123,7 @@ onMounted(async () => {
   document.documentElement.classList.add("lyric-window");
   document.body.classList.add("lyric-window");
   syncFromStorage();
-  skinTimer = window.setInterval(syncFromStorage, 1500);
+  skinTimer = window.setInterval(syncFromStorage, 800);
 
   try {
     const { listen } = await import("@tauri-apps/api/event");
@@ -116,6 +147,7 @@ onUnmounted(() => {
   <div
     class="lyric-root"
     :class="{ 'is-hover': hovered }"
+    :style="lyricStyle"
     @mouseenter="hovered = true"
     @mouseleave="hovered = false"
   >
@@ -324,28 +356,47 @@ onUnmounted(() => {
   line-height: 1.35;
 }
 
+/* 未悬停：主题色/自定义色 + 描边，桌面任意壁纸上可读 */
 .lyric-main {
-  font-size: 26px;
+  font-size: var(--lyric-main-size, 26px);
   font-weight: 800;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  color: var(--lyric-idle-main, var(--primary));
+  -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.55);
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 3px rgba(0, 0, 0, 0.75),
+    0 1px 2px rgba(0, 0, 0, 0.7),
+    0 0 1px rgba(255, 255, 255, 0.35),
+    1px 0 0 rgba(0, 0, 0, 0.45),
+    -1px 0 0 rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(0, 0, 0, 0.45),
+    0 -1px 0 rgba(0, 0, 0, 0.45);
 }
 
 .lyric-trans {
   margin-top: 4px;
-  font-size: 14px;
+  font-size: var(--lyric-trans-size, 14px);
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  color: var(--lyric-idle-trans, var(--primary));
+  opacity: 0.92;
+  -webkit-text-stroke: 0.4px rgba(0, 0, 0, 0.5);
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 0.7),
+    0 1px 2px rgba(0, 0, 0, 0.55);
 }
 
+/* 悬停：落在面板上，用主题正文色，去掉重描边 */
 .lyric-root.is-hover .lyric-main {
   color: var(--text);
+  -webkit-text-stroke: 0;
   text-shadow: none;
 }
 
 .lyric-root.is-hover .lyric-trans {
   color: var(--text-muted);
+  opacity: 1;
+  -webkit-text-stroke: 0;
   text-shadow: none;
 }
 

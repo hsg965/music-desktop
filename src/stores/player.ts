@@ -131,9 +131,12 @@ export const usePlayerStore = defineStore("player", () => {
     const key = `${track.source}-${track.id}-${br}`;
     if (!isRemoteMediaUrl(remoteUrl) || cachingKeys.has(key)) return;
     cachingKeys.add(key);
-    void cacheRemoteAudio(track.source, track.id, br, remoteUrl).finally(() => {
-      cachingKeys.delete(key);
-    });
+    // 延后一点再下，避免和首播抢带宽；失败会在控制台打 [audio-cache]
+    window.setTimeout(() => {
+      void cacheRemoteAudio(track.source, track.id, br, remoteUrl).finally(() => {
+        cachingKeys.delete(key);
+      });
+    }, 800);
   }
 
   async function resolveTrackMedia(track: Track): Promise<boolean> {
@@ -159,8 +162,12 @@ export const usePlayerStore = defineStore("player", () => {
           error.value = "无法获取播放地址（可能无版权或音源不可用）";
           return false;
         }
-        playUrl = urlRes.url;
-        remoteForCache = urlRes.url;
+        // 协议相对 //cdn... → https://cdn...
+        const remote = urlRes.url.startsWith("//")
+          ? `https:${urlRes.url}`
+          : urlRes.url;
+        playUrl = remote;
+        remoteForCache = remote;
       }
 
       // 封面 / 歌词并行（与音频缓存无关）
