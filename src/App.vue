@@ -10,7 +10,7 @@ import {
 } from "naive-ui";
 import { RouterView } from "vue-router";
 import { useSettingsStore } from "./stores/settings";
-import { getSkin, applySkin } from "./themes/apply";
+import { getSkin, applySkin, resolveSkinId } from "./themes/apply";
 import type { SkinId } from "./themes/types";
 
 const route = useRoute();
@@ -48,45 +48,50 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
     },
     Button: {
       borderRadiusMedium: t["radius-md"],
-      // 默认/主按钮：字色=主题色（与描边一致），悬停实心白字
-      textColor: t.primary,
-      textColorHover: "#ffffff",
-      textColorPressed: "#ffffff",
-      textColorFocus: t.primary,
-      textColorText: t.primary,
-      textColorTextHover: t["primary-hover"],
+      // 默认：深色字 + 可见底（亮色下白底）
+      textColor: t.text,
+      textColorHover: t.text,
+      textColorPressed: t.text,
+      textColorFocus: t.text,
+      textColorDisabled: t["text-faint"],
+      textColorText: t["text-muted"],
+      textColorTextHover: t.primary,
       textColorGhost: t.primary,
       textColorGhostHover: t["primary-hover"],
-      textColorPrimary: t.primary,
+      // 实心主按钮：白字 + 主色底（默认态就必须有底，不能靠 hover）
+      textColorPrimary: "#ffffff",
       textColorHoverPrimary: "#ffffff",
       textColorPressedPrimary: "#ffffff",
-      textColorFocusPrimary: t.primary,
-      color: "transparent",
-      colorHover: t.primary,
-      colorPressed: t["primary-pressed"],
-      colorPrimary: "transparent",
-      colorHoverPrimary: t.primary,
+      textColorFocusPrimary: "#ffffff",
+      textColorDisabledPrimary: "rgba(255,255,255,0.55)",
+      // secondary 主色按钮用主色当字色（naive 会取 colorPrimary 作 secondary 字色）
+      // 所以 color 系列给实心底，opacity 由 naive secondary 分支处理
+      color: isLight ? "#ffffff" : t["surface-2"],
+      colorHover: isLight ? "#f3f4f6" : t["surface-2"],
+      colorPressed: isLight ? "#e8e9ec" : t.surface,
+      colorFocus: isLight ? "#f3f4f6" : t["surface-2"],
+      colorDisabled: isLight ? "#ffffff" : t.surface,
+      colorPrimary: t.primary,
+      colorHoverPrimary: t["primary-hover"],
       colorPressedPrimary: t["primary-pressed"],
-      border: `1px solid ${t.primary}`,
-      borderHover: `1px solid ${t.primary}`,
+      colorFocusPrimary: t["primary-hover"],
+      colorDisabledPrimary: t.primary,
+      // secondary 浅底不透明度（亮色略高更易辨认）
+      colorOpacitySecondary: isLight ? "0.14" : "0.18",
+      colorOpacitySecondaryHover: isLight ? "0.2" : "0.26",
+      colorOpacitySecondaryPressed: isLight ? "0.24" : "0.32",
+      border: `1px solid ${t["border-strong"]}`,
+      borderHover: `1px solid ${t["border-strong"]}`,
       borderPrimary: `1px solid ${t.primary}`,
-      borderHoverPrimary: `1px solid ${t.primary}`,
-    },
-    Menu: {
-      itemTextColor: t["text-muted"],
-      itemTextColorHover: t.text,
-      itemTextColorActive: t.primary,
-      itemTextColorActiveHover: t.primary,
-      itemIconColor: t["text-muted"],
-      itemIconColorHover: t.text,
-      itemIconColorActive: t.primary,
-      itemColorActive: t["primary-soft"],
-      itemColorActiveHover: t["primary-soft"],
-      itemColorHover: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.06)",
+      borderHoverPrimary: `1px solid ${t["primary-hover"]}`,
+      borderFocusPrimary: `1px solid ${t["primary-hover"]}`,
     },
     Slider: {
       fillColor: t.primary,
       fillColorHover: t["primary-hover"],
+      railColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)",
+      railColorHover: isLight ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.18)",
+      handleSize: "12px",
     },
     Card: {
       color: t["surface-2"] || t["bar-bg"],
@@ -125,9 +130,12 @@ function onStorage(e: StorageEvent) {
       skinId?: string;
       lyricLookAhead?: number;
     };
-    if (data.skinId && data.skinId !== settings.skinId) {
-      settings.skinId = data.skinId as SkinId;
-      applySkin(data.skinId);
+    if (data.skinId) {
+      const next = resolveSkinId(data.skinId) as SkinId;
+      if (next !== settings.skinId) {
+        settings.skinId = next;
+        applySkin(next);
+      }
     }
     if (
       typeof data.lyricLookAhead === "number" &&

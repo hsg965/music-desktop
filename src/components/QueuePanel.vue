@@ -33,11 +33,11 @@ function clear() {
 </script>
 
 <template>
-  <div class="queue-root h-full min-h-0 flex flex-col gap-3 p-4">
-    <div class="flex items-center justify-between shrink-0">
-      <div class="text-sm" style="color: var(--text-muted)">
-        播放队列
-        <span class="ml-1" style="color: var(--text-faint)">({{ player.queue.length }})</span>
+  <div class="page-root">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">播放队列</h1>
+        <p class="page-subtitle">共 {{ player.queue.length }} 首</p>
       </div>
       <NButton
         size="small"
@@ -50,37 +50,36 @@ function clear() {
         </template>
         清空
       </NButton>
-    </div>
+    </header>
 
-    <div class="list-shell flex-1 min-h-0 skin-panel flex flex-col">
-      <div class="list-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-        <TrackList
-          v-if="player.queue.length"
-          :tracks="player.queue"
-          :active-key="activeKey"
-          removable
-          @play="onPlay"
-          @remove="onRemove"
-          @download="openDownload"
-        />
-        <div v-else class="h-60 flex items-center justify-center">
-          <NEmpty description="队列为空，去搜索添加歌曲吧" />
-        </div>
+    <div class="page-body list-body">
+      <TrackList
+        v-if="player.queue.length"
+        :tracks="player.queue"
+        :active-key="activeKey"
+        removable
+        @play="onPlay"
+        @remove="onRemove"
+        @download="openDownload"
+      />
+      <div v-else class="empty-box">
+        <NEmpty description="队列为空，去热榜或搜索添加歌曲" />
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.queue-root {
-  box-sizing: border-box;
-}
-
-.list-shell {
+.list-body {
   min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
-
-.list-scroll {
-  overscroll-behavior: contain;
+.empty-box {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

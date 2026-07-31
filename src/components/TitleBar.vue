@@ -37,58 +37,81 @@ async function openThemes() {
 </script>
 
 <template>
-  <header
-    class="title-bar h-10 flex items-center justify-between px-3 select-none border-b"
-    style="background: var(--bar-bg); border-color: var(--border); color: var(--text)"
-    data-tauri-drag-region
-  >
-    <div
-      class="flex items-center gap-2 text-sm"
-      style="color: var(--text-muted)"
-      data-tauri-drag-region
-    >
-      <Icon name="ri:music-2-fill" :size="18" color="var(--primary)" />
-      <span class="font-medium tracking-wide" style="color: var(--text)">
-        Music Desktop
-      </span>
+  <header class="title-bar" data-tauri-drag-region>
+    <div class="title-left" data-tauri-drag-region>
+      <span class="title-hint" data-tauri-drag-region>本地音乐客户端</span>
     </div>
-    <div class="flex items-center gap-0.5 no-drag">
-      <button type="button" class="win-btn" title="主题皮肤" @click.stop="openThemes">
-        <Icon name="ri:palette-line" :size="16" />
+    <div class="title-actions no-drag">
+      <button type="button" class="win-btn" title="主题" @click.stop="openThemes">
+        <Icon name="ri:palette-line" :size="15" />
       </button>
-      <button class="win-btn" title="最小化" @click="minimize">
-        <Icon name="ri:subtract-line" :size="16" />
+      <button type="button" class="win-btn" title="最小化" @click="minimize">
+        <Icon name="ri:subtract-line" :size="15" />
       </button>
-      <button class="win-btn" title="最大化" @click="toggleMaximize">
-        <Icon name="ri:checkbox-blank-line" :size="14" />
+      <button type="button" class="win-btn" title="最大化" @click="toggleMaximize">
+        <Icon name="ri:checkbox-blank-line" :size="13" />
       </button>
-      <button class="win-btn win-btn-close" title="关闭到托盘" @click="close">
-        <Icon name="ri:close-line" :size="16" />
+      <button
+        type="button"
+        class="win-btn win-btn-close"
+        title="关闭到托盘"
+        @click="close"
+      >
+        <Icon name="ri:close-line" :size="15" />
       </button>
     </div>
   </header>
 </template>
 
 <style scoped>
+.title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 0 14px;
+  user-select: none;
+}
+
+.title-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  height: 100%;
+}
+
+.title-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.title-actions {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+}
+
 .win-btn {
-  width: 36px;
-  height: 28px;
+  width: 46px;
+  height: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: 0;
   color: var(--text-muted);
   background: transparent;
   border: none;
   cursor: pointer;
   transition:
-    background 0.15s,
-    color 0.15s;
+    background 0.12s,
+    color 0.12s;
 }
+
 .win-btn:hover {
   background: var(--surface-2);
   color: var(--text);
 }
+
 .win-btn-close:hover {
   background: #e81123;
   color: #fff;

@@ -44,6 +44,24 @@ export interface LyricResult {
   tlyric?: string;
 }
 
+/** 官方热榜配置 */
+export interface ChartInfo {
+  id: string;
+  name: string;
+}
+
+/** 歌单 / 热榜详情（归一化后） */
+export interface PlaylistDetail {
+  id: string | number;
+  name: string;
+  description: string;
+  coverImgUrl: string;
+  trackCount: number;
+  playCount: number;
+  updateTime: number;
+  tracks: Track[];
+}
+
 export type PlayMode = "list" | "single" | "order";
 
 export interface PlayerSnapshot {

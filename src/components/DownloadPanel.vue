@@ -36,29 +36,27 @@ function shortPath(p: string) {
 </script>
 
 <template>
-  <div class="download-root h-full min-h-0 flex flex-col gap-3 p-4">
-    <div class="flex items-center justify-between gap-2 shrink-0">
-      <div class="text-sm" style="color: var(--text-muted)">
-        下载列表
-        <span v-if="store.activeCount" class="ml-1" style="color: var(--primary)">
-          ({{ store.activeCount }} 进行中)
-        </span>
-        <span v-else class="ml-1" style="color: var(--text-faint)">({{ store.tasks.length }})</span>
+  <div class="page-root">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">下载</h1>
+        <p class="page-subtitle">
+          <template v-if="store.activeCount">{{ store.activeCount }} 项进行中</template>
+          <template v-else>共 {{ store.tasks.length }} 项任务</template>
+        </p>
       </div>
-      <div class="flex gap-1">
-        <NButton
-          size="small"
-          quaternary
-          :disabled="!store.tasks.some((t) => t.status === 'done' || t.status === 'failed')"
-          @click="store.clearFinished()"
-        >
-          清除已完成
-        </NButton>
-      </div>
-    </div>
+      <NButton
+        size="small"
+        quaternary
+        :disabled="!store.tasks.some((t) => t.status === 'done' || t.status === 'failed')"
+        @click="store.clearFinished()"
+      >
+        清除已完成
+      </NButton>
+    </header>
 
-    <div class="list-shell flex-1 min-h-0 skin-panel flex flex-col">
-      <div class="list-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+    <div class="page-body">
+      <div class="page-scroll content-list">
         <template v-if="store.tasks.length">
           <div
             v-for="task in store.tasks"
@@ -110,7 +108,7 @@ function shortPath(p: string) {
             </div>
           </div>
         </template>
-        <div v-else class="h-60 flex items-center justify-center">
+        <div v-else class="empty-box">
           <NEmpty description="暂无下载任务，在歌曲旁点下载即可" />
         </div>
       </div>
@@ -119,32 +117,18 @@ function shortPath(p: string) {
 </template>
 
 <style scoped>
-.download-root {
-  box-sizing: border-box;
-}
-
-.list-shell {
-  min-height: 0;
-}
-
-.list-scroll {
-  overscroll-behavior: contain;
+.empty-box {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dl-row {
-  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   background: transparent;
 }
-.dl-row:nth-child(even) {
-  background: rgba(127, 127, 127, 0.04);
-}
 .dl-row:hover {
-  background: rgba(127, 127, 127, 0.1);
-}
-html[data-mode="light"] .dl-row:nth-child(even) {
-  background: rgba(255, 255, 255, 0.28);
-}
-html[data-mode="light"] .dl-row:hover {
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--surface-2);
 }
 </style>

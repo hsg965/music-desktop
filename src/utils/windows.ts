@@ -14,8 +14,8 @@ export async function openMiniPlayer() {
     const win = new WebviewWindow("mini", {
       url: "/#/mini",
       title: "迷你播放器",
-      width: 320,
-      height: 120,
+      width: 360,
+      height: 88,
       decorations: false,
       alwaysOnTop: true,
       resizable: false,
@@ -37,8 +37,20 @@ export async function openDesktopLyric() {
     const { WebviewWindow, getAllWebviewWindows } = await import(
       "@tauri-apps/api/webviewWindow"
     );
+    const { emit } = await import("@tauri-apps/api/event");
     const existing = (await getAllWebviewWindows()).find((w) => w.label === "lyric");
     if (existing) {
+      // 再次打开：确保可点、解锁并聚焦
+      try {
+        await existing.setIgnoreCursorEvents(false);
+      } catch {
+        // ignore
+      }
+      try {
+        await emit("desktop-lyric:cmd", "unlock");
+      } catch {
+        // ignore
+      }
       await existing.show();
       await existing.setFocus();
       return existing;
@@ -46,10 +58,10 @@ export async function openDesktopLyric() {
     const win = new WebviewWindow("lyric", {
       url: "/#/lyric",
       title: "桌面歌词",
-      width: 560,
-      height: 128,
-      minWidth: 360,
-      minHeight: 100,
+      width: 720,
+      height: 200,
+      minWidth: 420,
+      minHeight: 160,
       decorations: false,
       alwaysOnTop: true,
       resizable: true,
@@ -93,6 +105,40 @@ export async function openThemePicker() {
     return win;
   } catch (e) {
     console.warn("openThemePicker failed", e);
+    return null;
+  }
+}
+
+/** 独立设置窗口 */
+export async function openSettingsWindow() {
+  try {
+    const { WebviewWindow, getAllWebviewWindows } = await import(
+      "@tauri-apps/api/webviewWindow"
+    );
+    const existing = (await getAllWebviewWindows()).find(
+      (w) => w.label === "settings",
+    );
+    if (existing) {
+      await existing.show();
+      await existing.unminimize();
+      await existing.setFocus();
+      return existing;
+    }
+    const win = new WebviewWindow("settings", {
+      url: "/#/settings",
+      title: "设置",
+      width: 640,
+      height: 520,
+      minWidth: 520,
+      minHeight: 400,
+      decorations: false,
+      resizable: true,
+      center: true,
+      transparent: false,
+    });
+    return win;
+  } catch (e) {
+    console.warn("openSettingsWindow failed", e);
     return null;
   }
 }

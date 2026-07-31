@@ -156,8 +156,15 @@ function addAllToQueue() {
 </script>
 
 <template>
-  <div class="search-root h-full min-h-0 flex flex-col gap-3 p-4">
-    <div class="flex flex-wrap items-center gap-2 shrink-0">
+  <div class="page-root">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">搜索</h1>
+        <p class="page-subtitle">按歌曲、歌手或关键词查找</p>
+      </div>
+    </header>
+
+    <div class="page-toolbar">
       <NSelect
         v-model:value="settings.source"
         :options="sourceOptions"
@@ -174,19 +181,19 @@ function addAllToQueue() {
         @blur="onInputBlur"
       >
         <template #prefix>
-          <Icon name="ri:search-line" :size="16" color="var(--primary)" />
+          <Icon name="ri:search-line" :size="16" color="var(--text-muted)" />
         </template>
       </NInput>
-      <NButton type="primary" strong secondary :loading="loading" @click="doSearch()">
+      <NButton type="primary" :loading="loading" @click="doSearch()">
         搜索
       </NButton>
     </div>
 
     <div
       v-if="history.length && (inputFocused || !results.length)"
-      class="flex flex-wrap items-center gap-2 px-0.5 shrink-0"
+      class="page-toolbar history-row"
     >
-      <span class="text-xs shrink-0" style="color: var(--text-muted)">历史</span>
+      <span class="hist-label">历史</span>
       <NTag
         v-for="item in history"
         :key="item"
@@ -199,60 +206,42 @@ function addAllToQueue() {
       >
         {{ item }}
       </NTag>
-      <NButton text size="tiny" style="color: var(--text-muted)" @click="clearHistory">
-        清空
-      </NButton>
+      <NButton text size="tiny" @click="clearHistory">清空</NButton>
     </div>
 
-    <div
-      v-if="results.length"
-      class="flex flex-wrap items-center gap-2 px-0.5 shrink-0"
-    >
-      <NButton
-        type="primary"
-        strong
-        secondary
-        size="small"
-        :loading="playingAll"
-        @click="playAllResults"
-      >
+    <div v-if="results.length" class="page-toolbar">
+      <NButton type="primary" size="small" :loading="playingAll" @click="playAllResults">
         <template #icon>
-          <Icon name="ri:play-list-fill" :size="14" />
+          <Icon name="ri:play-fill" :size="14" />
         </template>
-        一键播放
+        播放本页
       </NButton>
-      <NButton size="small" secondary @click="addAllToQueue">
+      <NButton size="small" @click="addAllToQueue">
         <template #icon>
           <Icon name="ri:play-list-add-line" :size="14" />
         </template>
-        全部加入队列
+        加入队列
       </NButton>
-      <span class="text-xs" style="color: var(--text-muted)">
-        本页 {{ results.length }} 首
-      </span>
+      <span class="meta-count">本页 {{ results.length }} 首</span>
     </div>
 
-    <div class="list-shell flex-1 min-h-0 skin-panel flex flex-col">
-      <div class="list-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-        <NSpin :show="loading" class="min-h-60 w-full">
-          <TrackList
-            v-if="results.length"
-            :tracks="results"
-            @play="onPlay"
-            @add="onAdd"
-            @download="openDownload"
-          />
-          <div v-else class="h-60 flex items-center justify-center">
-            <NEmpty :description="emptyDesc" />
-          </div>
-        </NSpin>
-      </div>
+    <div class="page-body list-body">
+      <NSpin :show="loading" class="spin-fill">
+        <TrackList
+          v-if="results.length"
+          :tracks="results"
+          :virtual="false"
+          @play="onPlay"
+          @add="onAdd"
+          @download="openDownload"
+        />
+        <div v-else class="empty-box">
+          <NEmpty :description="emptyDesc" />
+        </div>
+      </NSpin>
     </div>
 
-    <div
-      v-if="itemCount > 0 && results.length"
-      class="flex justify-end shrink-0 pt-1"
-    >
+    <div v-if="itemCount > 0 && results.length" class="pager">
       <NPagination
         :page="page"
         :page-size="pageSize"
@@ -266,15 +255,46 @@ function addAllToQueue() {
 </template>
 
 <style scoped>
-.search-root {
-  box-sizing: border-box;
+.history-row {
+  gap: 6px;
 }
-
-.list-shell {
+.hist-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.meta-count {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.list-body {
   min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
-
-.list-scroll {
-  overscroll-behavior: contain;
+.spin-fill {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+.spin-fill :deep(.n-spin-content) {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.empty-box {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 </style>

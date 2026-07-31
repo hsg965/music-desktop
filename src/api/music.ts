@@ -1,9 +1,11 @@
 import { ofetch } from "ofetch";
 import type {
   Bitrate,
+  ChartInfo,
   LyricResult,
   MusicSource,
   PicResult,
+  PlaylistDetail,
   Track,
   UrlResult,
 } from "../types/music";
@@ -21,7 +23,37 @@ const TTL = {
   url: 8 * 60 * 1000,
   pic: 30 * 60 * 1000,
   lyric: 30 * 60 * 1000,
+  /** 热榜每日更新，缓存 30 分钟 */
+  playlist: 30 * 60 * 1000,
 };
+
+/** 网易云官方热榜 */
+export const CHART_LIST: ChartInfo[] = [
+  { id: "19723756", name: "飙升榜" },
+  { id: "3779629", name: "新歌榜" },
+  { id: "3778678", name: "热歌榜" },
+  { id: "71384707", name: "古典榜" },
+  { id: "1978921795", name: "电音榜" },
+  { id: "71385702", name: "ACG榜" },
+  { id: "2809513713", name: "欧美热歌榜" },
+  { id: "5059644681", name: "日语榜" },
+  { id: "745956260", name: "韩语榜" },
+];
+
+/** CRC32（大写 8 位 hex），用于 playlist 接口 s 参数 */
+function crc32Hex(input: string): string {
+  let c = 0xffffffff;
+  for (let i = 0; i < input.length; i++) {
+    c ^= input.charCodeAt(i);
+    for (let j = 0; j < 8; j++) {
+      c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return ((c ^ 0xffffffff) >>> 0)
+    .toString(16)
+    .toUpperCase()
+    .padStart(8, "0");
+}
 
 function isTauri(): boolean {
   return (
@@ -113,6 +145,98 @@ function normalizeTracks(list: Track[], fallbackSource: string): Track[] {
     lyric_id: t.lyric_id ?? t.id,
     source: (t.source || fallbackSource) as MusicSource,
   }));
+}
+
+/** 网易云原始曲目结构（playlist 接口） */
+interface NeteaseRawTrack {
+  id: string | number;
+  name?: string;
+  ar?: { id?: number; name?: string }[];
+  artists?: { id?: number; name?: string }[] | string[];
+  al?: {
+    id?: number;
+    name?: string;
+    picUrl?: string;
+    pic_str?: string;
+    pic?: number | string;
+  };
+  album?: { name?: string; picUrl?: string; pic_str?: string; pic?: number | string };
+}
+
+interface PlaylistApiResponse {
+  code?: number;
+  playlist?: {
+    id?: string | number;
+    name?: string;
+    description?: string | null;
+    coverImgUrl?: string;
+    trackCount?: number;
+    playCount?: number;
+    updateTime?: number;
+    tracks?: NeteaseRawTrack[] | null;
+  } | null;
+}
+
+function normalizeHttps(url: string): string {
+  if (!url) return "";
+  if (url.startsWith("//")) return `https:${url}`;
+  if (url.startsWith("http://")) return `https://${url.slice(7)}`;
+  return url;
+}
+
+function mapNeteaseTrack(raw: NeteaseRawTrack): Track {
+  const artists = raw.ar ?? raw.artists ?? [];
+  const artistNames = artists
+    .map((a) => (typeof a === "string" ? a : a?.name || ""))
+    .filter(Boolean);
+  const album = raw.al ?? raw.album;
+  const picId =
+    album?.pic_str ?? album?.pic ?? "";
+  const picUrl = normalizeHttps(album?.picUrl || "");
+
+  return {
+    id: raw.id,
+    name: raw.name ?? "未知曲目",
+    artist: artistNames.length ? artistNames : ["未知歌手"],
+    album: album?.name ?? "",
+    pic_id: picId,
+    lyric_id: raw.id,
+    source: "netease",
+    picUrl: picUrl || undefined,
+  };
+}
+
+/** 获取歌单 / 热榜详情 */
+export async function fetchPlaylist(id: string | number): Promise<PlaylistDetail> {
+  const idStr = String(id);
+  const data = await apiGet<PlaylistApiResponse | null>(
+    {
+      types: "playlist",
+      id: idStr,
+      s: crc32Hex(idStr),
+    },
+    TTL.playlist,
+  );
+
+  const pl = data?.playlist;
+  if (!pl || (data?.code != null && data.code !== 200)) {
+    throw new Error("获取热榜失败");
+  }
+
+  const tracks = Array.isArray(pl.tracks)
+    ? pl.tracks.map(mapNeteaseTrack)
+    : [];
+
+  return {
+    id: pl.id ?? idStr,
+    name: pl.name ?? "热榜",
+    description: pl.description || "",
+    coverImgUrl: normalizeHttps(pl.coverImgUrl || ""),
+    trackCount: pl.trackCount ?? tracks.length,
+    playCount: pl.playCount ?? 0,
+    updateTime: pl.updateTime ?? 0,
+    tracks,
+  };
 }
 
 /** 获取播放地址 */

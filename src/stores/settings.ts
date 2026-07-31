@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 import type { Bitrate, MusicSource } from "../types/music";
 import type { SkinId } from "../themes/types";
-import { DEFAULT_SKIN_ID } from "../themes/registry";
+import { DEFAULT_SKIN_ID, resolveSkinId } from "../themes/registry";
 import { applySkin } from "../themes/apply";
 
 const STORAGE_KEY = "music-desktop-settings";
@@ -155,7 +155,7 @@ export const useSettingsStore = defineStore("settings", () => {
   const closeToTray = ref(initial.closeToTray);
   const desktopLyric = ref(initial.desktopLyric);
   const miniPlayer = ref(initial.miniPlayer);
-  const skinId = ref<SkinId>(initial.skinId || DEFAULT_SKIN_ID);
+  const skinId = ref<SkinId>(resolveSkinId(initial.skinId || DEFAULT_SKIN_ID));
   const lyricLookAhead = ref(
     clampLookAhead(initial.lyricLookAhead ?? DEFAULT_LYRIC_LOOKAHEAD),
   );
@@ -188,9 +188,10 @@ export const useSettingsStore = defineStore("settings", () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 
-  function setSkin(id: SkinId) {
-    skinId.value = id;
-    applySkin(id);
+  function setSkin(id: SkinId | string) {
+    const resolved = resolveSkinId(id);
+    skinId.value = resolved;
+    applySkin(resolved);
   }
 
   function setLyricLookAhead(v: number) {

@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * 桌面歌词
+ * - 顶栏拖拽；底栏悬停控制
+ * - 三行歌词始终完整显示
+ * - 移出窗口（含顶部）立即去掉背景
+ */
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import type { PlayerSnapshot } from "../types/music";
 import { findLyricIndex, parseLrc } from "../utils/lrc";
@@ -12,18 +18,23 @@ import {
   type DesktopLyricColorMode,
 } from "../stores/settings";
 
+const STORAGE_KEY = "music-desktop-settings";
+
 const state = ref<PlayerSnapshot | null>(null);
 const hovered = ref(false);
-/** 与主窗口设置同步的提前量（秒） */
+const locked = ref(false);
 const lyricLookAhead = ref(DEFAULT_LYRIC_LOOKAHEAD);
 const colorMode = ref<DesktopLyricColorMode>("theme");
 const customColor = ref(DEFAULT_DESKTOP_LYRIC_COLOR);
 const fontSize = ref(DEFAULT_DESKTOP_LYRIC_FONT_SIZE);
+
 let unlisten: (() => void) | null = null;
+let unlistenCmd: (() => void) | null = null;
 let skinTimer: number | null = null;
 
 const lines = computed(() => parseLrc(state.value?.lyricText || ""));
 const tlines = computed(() => parseLrc(state.value?.tlyricText || ""));
+
 const activeIndex = computed(() =>
   findLyricIndex(
     lines.value,
@@ -32,29 +43,47 @@ const activeIndex = computed(() =>
   ),
 );
 
-const currentLine = computed(() => {
+function lineTextAt(idx: number): string {
+  if (idx < 0 || idx >= lines.value.length) return "";
+  const t = lines.value[idx]?.text?.trim() || "";
+  if (t) return t;
+  for (let i = idx + 1; i < lines.value.length; i++) {
+    if (lines.value[i].text.trim()) return lines.value[i].text.trim();
+  }
+  for (let i = idx - 1; i >= 0; i--) {
+    if (lines.value[i].text.trim()) return lines.value[i].text.trim();
+  }
+  return "";
+}
+
+const prevText = computed(() => {
+  if (!state.value?.track || activeIndex.value <= 0) return "";
+  return lineTextAt(activeIndex.value - 1);
+});
+
+const currentText = computed(() => {
   if (!state.value?.track) return "播放音乐后显示歌词";
-  // 前奏/未到第一句：显示下一句（即将唱）或歌名
   if (activeIndex.value < 0) {
     const first = lines.value.find((l) => l.text.trim());
     return first?.text || state.value.track.name || "♪";
   }
-  const text = lines.value[activeIndex.value]?.text?.trim();
-  // 空行（间奏标记）时看下一句有字的
-  if (!text) {
-    for (let i = activeIndex.value + 1; i < lines.value.length; i++) {
-      if (lines.value[i].text.trim()) return lines.value[i].text;
-    }
-    return state.value.track.name || "♪";
+  return lineTextAt(activeIndex.value) || state.value.track.name || "♪";
+});
+
+const nextText = computed(() => {
+  if (!state.value?.track) return "";
+  if (activeIndex.value < 0) {
+    return lines.value.length > 1 ? lineTextAt(1) : "";
   }
-  return text;
+  if (activeIndex.value + 1 >= lines.value.length) return "";
+  return lineTextAt(activeIndex.value + 1);
 });
 
 const currentT = computed(() => {
   if (activeIndex.value < 0) return "";
   const time = lines.value[activeIndex.value]?.time ?? 0;
   const idx = findLyricIndex(tlines.value, time, lyricLookAhead.value);
-  return idx >= 0 ? tlines.value[idx]?.text : "";
+  return idx >= 0 ? tlines.value[idx]?.text || "" : "";
 });
 
 const songName = computed(() => state.value?.track?.name || "未播放");
@@ -63,30 +92,23 @@ const artist = computed(() => {
   return a?.length ? a.join(" / ") : "";
 });
 
-/** 未悬停时歌词主色：主题主色 或 自定义色 */
-const idleMainColor = computed(() => {
+const accent = computed(() => {
   if (colorMode.value === "custom") return customColor.value;
   return "var(--primary)";
 });
 
-const idleTransColor = computed(() => {
-  if (colorMode.value === "custom") {
-    // 半透明自定义色
-    const c = customColor.value;
-    if (c.startsWith("#") && (c.length === 7 || c.length === 4)) {
-      return c.length === 7 ? `${c}cc` : c;
-    }
-    return c;
-  }
-  return "var(--primary)";
-});
-
-const lyricStyle = computed(() => ({
-  "--lyric-main-size": `${fontSize.value}px`,
-  "--lyric-trans-size": `${Math.max(12, Math.round(fontSize.value * 0.55))}px`,
-  "--lyric-idle-main": idleMainColor.value,
-  "--lyric-idle-trans": idleTransColor.value,
+const rootStyle = computed(() => ({
+  "--dl-accent": accent.value,
+  "--dl-main": `${fontSize.value}px`,
+  "--dl-side": `${Math.max(13, Math.round(fontSize.value * 0.62))}px`,
+  "--dl-trans": `${Math.max(11, Math.round(fontSize.value * 0.48))}px`,
 }));
+
+const activeHover = computed(() => hovered.value && !locked.value);
+
+function clearHover() {
+  hovered.value = false;
+}
 
 async function emitCmd(cmd: string) {
   try {
@@ -97,10 +119,48 @@ async function emitCmd(cmd: string) {
   }
 }
 
+async function ensureClickable() {
+  try {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    await getCurrentWindow().setIgnoreCursorEvents(false);
+  } catch {
+    // ignore
+  }
+}
+
 async function closeWin() {
+  locked.value = false;
+  clearHover();
+  await ensureClickable();
   try {
     const { getCurrentWindow } = await import("@tauri-apps/api/window");
     await getCurrentWindow().close();
+  } catch {
+    // ignore
+  }
+}
+
+function setLocked(v: boolean) {
+  locked.value = v;
+  clearHover();
+  void ensureClickable();
+}
+
+function toggleLock() {
+  setLocked(!locked.value);
+}
+
+function unlock() {
+  setLocked(false);
+}
+
+function bumpFont(delta: number) {
+  fontSize.value = Math.min(56, Math.max(14, fontSize.value + delta));
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    data.desktopLyricFontSize = fontSize.value;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
     // ignore
   }
@@ -119,16 +179,70 @@ function syncFromStorage() {
   }
 }
 
+function onEnter() {
+  if (!locked.value) hovered.value = true;
+}
+
+function onLeave(e: MouseEvent) {
+  // 从顶部移出窗口时，relatedTarget 常为 null，必须收起
+  const related = e.relatedTarget as Node | null;
+  if (related && (e.currentTarget as HTMLElement).contains(related)) {
+    return;
+  }
+  clearHover();
+}
+
+/** 顶栏拖拽 */
+async function onDragBarDown(e: PointerEvent) {
+  if (locked.value) return;
+  if (e.button !== 0) return;
+  const t = e.target as HTMLElement | null;
+  if (t?.closest(".no-drag")) return;
+  clearHover();
+  try {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    await getCurrentWindow().startDragging();
+  } catch {
+    // ignore
+  } finally {
+    // 拖拽结束后从顶栏松手，补一次收起（Windows 常丢 mouseleave）
+    clearHover();
+  }
+}
+
+/** 指针离开整个文档（从窗口任意边缘含顶部离开） */
+function onDocumentPointerLeave() {
+  clearHover();
+}
+
+function onWindowBlur() {
+  clearHover();
+}
+
 onMounted(async () => {
   document.documentElement.classList.add("lyric-window");
   document.body.classList.add("lyric-window");
   syncFromStorage();
+  await ensureClickable();
   skinTimer = window.setInterval(syncFromStorage, 800);
+
+  // 顶栏移出窗口时 mouseleave 经常不触发，用 document 级兜底
+  document.documentElement.addEventListener(
+    "mouseleave",
+    onDocumentPointerLeave,
+  );
+  document.addEventListener("mouseleave", onDocumentPointerLeave);
+  window.addEventListener("blur", onWindowBlur);
+  // 指针在窗口外时（部分 WebView 用这个）
+  window.addEventListener("pointerleave", onDocumentPointerLeave);
 
   try {
     const { listen } = await import("@tauri-apps/api/event");
     unlisten = await listen<PlayerSnapshot>("player:state", (e) => {
       state.value = e.payload;
+    });
+    unlistenCmd = await listen<string>("desktop-lyric:cmd", (e) => {
+      if (e.payload === "unlock") unlock();
     });
   } catch {
     // ignore
@@ -139,300 +253,470 @@ onUnmounted(() => {
   document.documentElement.classList.remove("lyric-window");
   document.body.classList.remove("lyric-window");
   if (skinTimer != null) window.clearInterval(skinTimer);
+  document.documentElement.removeEventListener(
+    "mouseleave",
+    onDocumentPointerLeave,
+  );
+  document.removeEventListener("mouseleave", onDocumentPointerLeave);
+  window.removeEventListener("blur", onWindowBlur);
+  window.removeEventListener("pointerleave", onDocumentPointerLeave);
   unlisten?.();
+  unlistenCmd?.();
+  void ensureClickable();
 });
 </script>
 
 <template>
   <div
-    class="lyric-root"
-    :class="{ 'is-hover': hovered }"
-    :style="lyricStyle"
-    @mouseenter="hovered = true"
-    @mouseleave="hovered = false"
+    class="dl"
+    :class="{
+      'is-hover': activeHover,
+      'is-locked': locked,
+    }"
+    :style="rootStyle"
+    @mouseenter="onEnter"
+    @mouseleave="onLeave"
   >
-    <div class="drag-layer" data-tauri-drag-region />
-    <div class="bg-layer" />
+    <!-- 圆角背景：仅悬停 -->
+    <div class="glass" :class="{ on: activeHover }" aria-hidden="true" />
 
-    <button
-      type="button"
-      class="btn-close no-drag"
-      title="关闭"
-      @click.stop="closeWin"
+    <!-- 顶栏：整条可拖；悬停只显示歌名，不显示横条/提示文案 -->
+    <header
+      class="drag-bar"
+      data-tauri-drag-region
+      @pointerdown="onDragBarDown"
     >
-      <Icon name="ri:close-line" :size="14" />
-    </button>
-
-    <div class="hover-chrome no-drag">
-      <div class="header">
-        <div class="song-name">{{ songName }}</div>
-        <div v-if="artist" class="song-artist">{{ artist }}</div>
+      <div class="drag-fill" data-tauri-drag-region>
+        <span
+          v-if="activeHover"
+          class="drag-meta truncate"
+          data-tauri-drag-region
+        >
+          {{ songName }}
+          <template v-if="artist"> · {{ artist }}</template>
+        </span>
       </div>
-      <div class="footer">
-        <button type="button" class="btn" title="上一首" @click.stop="emitCmd('prev')">
-          <Icon name="ri:skip-back-fill" :size="16" />
+      <div class="drag-actions no-drag" :class="{ show: activeHover || locked }">
+        <button
+          v-if="!locked"
+          type="button"
+          class="icon-btn"
+          title="锁定"
+          @click.stop="toggleLock"
+        >
+          <Icon name="ri:lock-unlock-line" :size="14" />
+        </button>
+        <button
+          v-else
+          type="button"
+          class="icon-btn unlock"
+          title="解锁"
+          @click.stop="unlock"
+        >
+          <Icon name="ri:lock-fill" :size="14" />
         </button>
         <button
           type="button"
-          class="btn btn-main"
-          title="播放/暂停"
-          @click.stop="emitCmd('toggle')"
+          class="icon-btn close"
+          title="关闭"
+          @click.stop="closeWin"
         >
-          <Icon
-            :name="state?.playing ? 'ri:pause-fill' : 'ri:play-fill'"
-            :size="18"
-          />
+          <Icon name="ri:close-line" :size="14" />
         </button>
-        <button type="button" class="btn" title="下一首" @click.stop="emitCmd('next')">
-          <Icon name="ri:skip-forward-fill" :size="16" />
-        </button>
+      </div>
+    </header>
+
+    <!-- 歌词：悬停时上移，避开底栏控件 -->
+    <div class="stage">
+      <div class="line side" :class="{ empty: !prevText }">
+        {{ prevText || "\u00a0" }}
+      </div>
+      <div class="line current" :key="'c-' + activeIndex">
+        <div class="current-main">{{ currentText }}</div>
+        <div v-if="currentT" class="current-trans">{{ currentT }}</div>
+      </div>
+      <div class="line side" :class="{ empty: !nextText }">
+        {{ nextText || "\u00a0" }}
       </div>
     </div>
 
-    <div class="lyric-body">
-      <div class="lyric-main">{{ currentLine }}</div>
-      <div v-if="currentT" class="lyric-trans">{{ currentT }}</div>
-    </div>
+    <!-- 底栏控制：不压住歌词（歌词区已预留底部空间） -->
+    <footer class="dock no-drag" :class="{ show: activeHover }">
+      <button type="button" class="tb-btn" title="缩小字号" @click.stop="bumpFont(-2)">
+        <span class="tb-font">A−</span>
+      </button>
+      <button type="button" class="tb-btn" title="上一首" @click.stop="emitCmd('prev')">
+        <Icon name="ri:skip-back-fill" :size="18" />
+      </button>
+      <button
+        type="button"
+        class="tb-play"
+        title="播放/暂停"
+        @click.stop="emitCmd('toggle')"
+      >
+        <Icon
+          :name="state?.playing ? 'ri:pause-fill' : 'ri:play-fill'"
+          :size="20"
+        />
+      </button>
+      <button type="button" class="tb-btn" title="下一首" @click.stop="emitCmd('next')">
+        <Icon name="ri:skip-forward-fill" :size="18" />
+      </button>
+      <button type="button" class="tb-btn" title="放大字号" @click.stop="bumpFont(2)">
+        <span class="tb-font">A+</span>
+      </button>
+    </footer>
   </div>
 </template>
 
 <style scoped>
-.lyric-root {
+.dl {
   position: relative;
   width: 100vw;
   height: 100vh;
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 16px;
+  /* 给圆角留边，避免贴边被裁 */
+  padding: 6px;
   background: transparent;
   overflow: visible;
   user-select: none;
 }
 
-.drag-layer {
+.glass {
   position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: rgba(0, 0, 0, 0.001);
-}
-
-.bg-layer {
-  position: absolute;
-  inset: 0;
+  inset: 6px;
   z-index: 0;
-  border-radius: 12px;
-  background: transparent;
+  border-radius: 14px;
   pointer-events: none;
-  transition: background 0.18s ease, box-shadow 0.18s ease;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
 
-.lyric-root.is-hover .bg-layer {
-  background: var(--bar-bg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+.glass.on {
+  opacity: 1;
+  background: rgba(14, 14, 18, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+}
+
+html[data-mode="light"] .glass.on {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 24px rgba(20, 30, 40, 0.1);
 }
 
 .no-drag {
-  position: relative;
-  z-index: 3;
+  -webkit-app-region: no-drag !important;
+  app-region: no-drag !important;
 }
 
-.hover-chrome {
+/* 顶栏：整条拖拽，无横条/无「拖动此处」文案 */
+.drag-bar {
   position: absolute;
-  inset: 0;
-  z-index: 3;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  z-index: 5;
+  height: 34px;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
   align-items: center;
-  padding: 8px 28px 8px;
-  box-sizing: border-box;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 6px 0 14px;
+  -webkit-app-region: drag;
+  app-region: drag;
+  cursor: grab;
+  border-radius: 14px 14px 0 0;
+}
+
+.dl.is-locked .drag-bar {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  cursor: default;
+}
+
+.drag-bar:active {
+  cursor: grabbing;
+}
+
+.drag-fill {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.drag-meta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 500;
+  max-width: 100%;
+}
+
+html[data-mode="light"] .dl.is-hover .drag-meta {
+  color: var(--text-muted);
+}
+
+.drag-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.12s;
 }
 
-.lyric-root.is-hover .hover-chrome {
+.drag-actions.show {
   opacity: 1;
-  pointer-events: none;
-}
-
-.lyric-root.is-hover .hover-chrome .footer,
-.lyric-root.is-hover .btn-close {
   pointer-events: auto;
 }
 
-.header {
-  width: 100%;
-  max-width: 100%;
-  padding: 0 8px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.song-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
-}
-
-.song-artist {
-  margin-top: 1px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
-}
-
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-shrink: 0;
-  padding-bottom: 2px;
-  min-height: 36px;
-  overflow: visible;
-}
-
-.btn-close {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  z-index: 4;
-  width: 26px;
-  height: 26px;
+.icon-btn {
+  width: 28px;
+  height: 28px;
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.72);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 0.18s,
-    background 0.15s,
-    color 0.15s;
 }
 
-.lyric-root.is-hover .btn-close {
+.dl.is-hover .icon-btn,
+.dl.is-locked .icon-btn {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+html[data-mode="light"] .dl.is-hover .icon-btn {
+  color: var(--text-muted);
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+html[data-mode="light"] .dl.is-hover .icon-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.icon-btn.unlock {
+  color: var(--dl-accent, var(--primary));
+}
+
+.icon-btn.close:hover {
+  background: #e81123 !important;
+  color: #fff !important;
+}
+
+/* 歌词：中间区域；悬停时加大底部 padding，躲开控件 */
+.stage {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 36px 22px 20px;
+  box-sizing: border-box;
+  text-align: center;
+  pointer-events: none;
+  overflow: hidden;
+  transition: padding-bottom 0.12s ease;
+}
+
+.dl.is-hover .stage {
+  /* 底栏约 52px，歌词整体上移，不被挡住 */
+  padding-bottom: 56px;
+  padding-top: 38px;
+}
+
+.line {
+  width: 100%;
+  max-width: 100%;
+  /* 允许完整显示字高，横向省略 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.45;
+  flex-shrink: 0;
+}
+
+.line.side {
+  font-size: var(--dl-side, 15px);
+  font-weight: 500;
+  /* 保证一行完整高度 */
+  min-height: calc(var(--dl-side, 15px) * 1.45);
+  color: rgba(255, 255, 255, 0.58);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.line.side.empty {
+  opacity: 0.28;
+}
+
+.dl.is-hover .line.side {
+  color: rgba(255, 255, 255, 0.52);
+  text-shadow: none;
+}
+
+html[data-mode="light"] .dl.is-hover .line.side {
+  color: var(--text-muted);
+}
+
+.line.current {
+  flex-shrink: 0;
+  min-height: calc(var(--dl-main, 26px) * 1.45);
+  animation: line-in 0.28s ease;
+}
+
+.current-main {
+  font-size: var(--dl-main, 26px);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.45;
+  color: var(--dl-accent, #fff);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  /* 避免半个字被裁 */
+  overflow: visible;
+}
+
+.dl.is-hover .current-main {
+  color: #fff;
+  text-shadow: none;
+}
+
+html[data-mode="light"] .dl.is-hover .current-main {
+  color: var(--text);
+}
+
+.current-trans {
+  margin-top: 4px;
+  font-size: var(--dl-trans, 13px);
+  font-weight: 500;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.55);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+.dl.is-hover .current-trans {
+  color: rgba(255, 255, 255, 0.5);
+  text-shadow: none;
+}
+
+html[data-mode="light"] .dl.is-hover .current-trans {
+  color: var(--text-muted);
+}
+
+@keyframes line-in {
+  from {
+    opacity: 0.5;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 底栏：绝对定位，不占歌词布局高度 */
+.dock {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  z-index: 5;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 0 0 14px 14px;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+.dock.show {
   opacity: 1;
+  transform: translateY(0);
   pointer-events: auto;
 }
 
-.btn-close:hover {
-  background: #e81123;
-  color: #fff;
-}
-
-.lyric-body {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  max-width: 100%;
-  text-align: center;
-  pointer-events: none;
-  padding: 0 8px;
-  box-sizing: border-box;
-}
-
-.lyric-main,
-.lyric-trans {
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.35;
-}
-
-/* 未悬停：主题色/自定义色 + 描边，桌面任意壁纸上可读 */
-.lyric-main {
-  font-size: var(--lyric-main-size, 26px);
-  font-weight: 800;
-  color: var(--lyric-idle-main, var(--primary));
-  -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.55);
-  paint-order: stroke fill;
-  text-shadow:
-    0 0 3px rgba(0, 0, 0, 0.75),
-    0 1px 2px rgba(0, 0, 0, 0.7),
-    0 0 1px rgba(255, 255, 255, 0.35),
-    1px 0 0 rgba(0, 0, 0, 0.45),
-    -1px 0 0 rgba(0, 0, 0, 0.45),
-    0 1px 0 rgba(0, 0, 0, 0.45),
-    0 -1px 0 rgba(0, 0, 0, 0.45);
-}
-
-.lyric-trans {
-  margin-top: 4px;
-  font-size: var(--lyric-trans-size, 14px);
-  font-weight: 700;
-  color: var(--lyric-idle-trans, var(--primary));
-  opacity: 0.92;
-  -webkit-text-stroke: 0.4px rgba(0, 0, 0, 0.5);
-  paint-order: stroke fill;
-  text-shadow:
-    0 0 2px rgba(0, 0, 0, 0.7),
-    0 1px 2px rgba(0, 0, 0, 0.55);
-}
-
-/* 悬停：落在面板上，用主题正文色，去掉重描边 */
-.lyric-root.is-hover .lyric-main {
-  color: var(--text);
-  -webkit-text-stroke: 0;
-  text-shadow: none;
-}
-
-.lyric-root.is-hover .lyric-trans {
-  color: var(--text-muted);
-  opacity: 1;
-  -webkit-text-stroke: 0;
-  text-shadow: none;
-}
-
-.btn {
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
-  border-radius: 999px;
-  border: 1px solid var(--primary);
+.tb-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
   background: transparent;
-  color: var(--primary);
+  color: rgba(255, 255, 255, 0.85);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
 }
 
-.btn:hover {
-  background: var(--primary);
+html[data-mode="light"] .dl.is-hover .tb-btn {
+  color: var(--text-muted);
+}
+
+.tb-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
 
-.btn-main {
-  width: 34px;
-  height: 34px;
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
+html[data-mode="light"] .dl.is-hover .tb-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
 }
 
-.btn-main:hover {
-  background: var(--primary-hover);
+.tb-play {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.tb-play:hover {
+  transform: scale(1.05);
+}
+
+html[data-mode="light"] .dl.is-hover .tb-play {
+  background: var(--text);
   color: #fff;
+}
+
+.tb-font {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
 
@@ -446,5 +730,7 @@ body.lyric-window,
   border: none !important;
   width: 100% !important;
   height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 </style>

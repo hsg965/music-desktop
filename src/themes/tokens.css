@@ -1,127 +1,256 @@
-/* 默认 token（在 JS apply 前兜底） */
+/* 默认 token（JS apply 前兜底） */
 :root {
-  --bg: #0f0f16;
-  --bg-grad: #0f0f16;
-  --sider-bg: rgba(18, 18, 28, 0.92);
-  --bar-bg: rgba(16, 16, 24, 0.94);
+  --bg: #121212;
+  --bg-grad: #121212;
+  --sider-bg: #000000;
+  --bar-bg: #181818;
   --surface: rgba(255, 255, 255, 0.04);
   --surface-2: rgba(255, 255, 255, 0.07);
   --text: rgba(255, 255, 255, 0.92);
-  --text-muted: rgba(255, 255, 255, 0.55);
-  --text-faint: rgba(255, 255, 255, 0.32);
-  --primary: #8b7cf7;
-  --primary-hover: #a094ff;
-  --primary-pressed: #6f5fe0;
-  --primary-soft: rgba(139, 124, 247, 0.18);
+  --text-muted: rgba(255, 255, 255, 0.58);
+  --text-faint: rgba(255, 255, 255, 0.36);
+  --primary: #1db954;
+  --primary-hover: #1ed760;
+  --primary-pressed: #169c46;
+  --primary-soft: rgba(29, 185, 84, 0.16);
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  --glow: 0 0 24px rgba(139, 124, 247, 0.25);
-  --player-height: 80px;
-  --sider-width: 160px;
-  --cover-radius: 12px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --glow: none;
+  --player-height: 76px;
+  --titlebar-height: 36px;
+  --sider-width: 204px;
+  --cover-radius: 6px;
   --panel-blur: 0px;
-  --accent-secondary: #c4bbff;
-  --noise-opacity: 0.03;
+  --accent-secondary: #1ed760;
+  --noise-opacity: 0;
   --grid-opacity: 0;
-  /* 毛玻璃面板专用（可被主题覆盖） */
-  --glass-bg: rgba(255, 255, 255, 0.08);
-  --glass-bg-light: rgba(255, 255, 255, 0.55);
-  --glass-border: rgba(255, 255, 255, 0.14);
-  --glass-blur: 18px;
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-light: rgba(0, 0, 0, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: 0px;
   color-scheme: dark;
 }
 
-/* 氛围背景层 —— 完整展示，面板透出来看 */
+/* ========== 桌面壳：连续分区，无悬浮网页卡片 ========== */
+
 .app-shell {
   position: relative;
-  background: var(--bg-grad);
+  background: var(--bg);
   color: var(--text);
   isolation: isolate;
 }
 
-.app-shell::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: var(--noise-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
+.title-bar {
+  height: var(--titlebar-height);
+  min-height: var(--titlebar-height);
+  flex-shrink: 0;
+  background: var(--sider-bg);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
 }
 
-html[data-layout="neon-rail"] .app-shell::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: var(--grid-opacity);
-  background-image:
-    linear-gradient(rgba(0, 229, 255, 0.35) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 229, 255, 0.35) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 20%, transparent 75%);
+.workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
 }
 
-.app-shell > .theme-decor {
-  z-index: 0;
-}
-.app-shell > *:not(.theme-decor) {
-  position: relative;
-  z-index: 1;
+/* 左侧导航 */
+.app-nav {
+  width: var(--sider-width);
+  min-width: var(--sider-width);
+  background: var(--sider-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 12px 10px 16px;
+  gap: 4px;
+  user-select: none;
 }
 
-/* ========== 毛玻璃「独立白板」：半透明 + 模糊，透出底部主题 ========== */
+.app-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 14px;
+  color: var(--text);
+}
 
+.app-nav-brand-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.app-nav-section {
+  margin: 10px 10px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.app-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.app-nav-item:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.app-nav-item.active {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.app-nav-item.active .nav-icon {
+  color: var(--primary);
+}
+
+.app-nav-item .nav-icon {
+  display: inline-flex;
+  width: 20px;
+  justify-content: center;
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.app-nav-badge {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  background: var(--primary);
+  color: #fff;
+}
+
+/* 主内容区 */
+.app-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 页面通用：桌面应用内页，不再套玻璃卡片 */
+.page-root {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 12px;
+  gap: 12px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  min-height: 32px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.page-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.page-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+/* 列表容器：贴合内容区，无圆角悬浮板 */
+.content-list {
+  min-height: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* 兼容旧 class，去掉玻璃感 */
 .skin-surface,
 .skin-panel {
   position: relative;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--glass-border, var(--border-strong));
-  /* 深色默认：浅白半透明玻璃 */
-  background: var(--glass-bg, rgba(255, 255, 255, 0.08));
-  backdrop-filter: blur(var(--glass-blur, 18px)) saturate(1.35);
-  -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(1.35);
-  box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
-  /* 不裁切内部滚动；由子元素 overflow-y-auto 负责 */
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
   overflow: hidden;
   min-height: 0;
 }
 
-/* 亮色主题：更亮的磨砂玻璃，仍能透出背景渐变/插画 */
-html[data-mode="light"] .skin-surface,
-html[data-mode="light"] .skin-panel {
-  background: var(--glass-bg-light, rgba(255, 255, 255, 0.52));
-  border-color: rgba(255, 255, 255, 0.65);
-  box-shadow:
-    0 6px 28px rgba(30, 40, 60, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(var(--glass-blur, 20px)) saturate(1.25);
-  -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(1.25);
-}
-
-/* 极细高光边，独立「板」感，不抢主题色 */
 .skin-panel::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  display: none;
 }
 
-html[data-mode="light"] .skin-panel::after {
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-}
-
-/* 列表行：干净、轻微分隔，透出玻璃底 */
+/* 曲目列表 */
 .track-list {
   position: relative;
   z-index: 0;
@@ -129,30 +258,23 @@ html[data-mode="light"] .skin-panel::after {
 }
 
 .track-row {
-  border-bottom: 1px solid var(--border) !important;
+  border-bottom: none !important;
+  border-radius: var(--radius-sm);
   background: transparent !important;
 }
 
 .track-row:nth-child(even) {
-  background: rgba(127, 127, 127, 0.04) !important;
-}
-
-html[data-mode="light"] .track-row:nth-child(even) {
-  background: rgba(255, 255, 255, 0.28) !important;
+  background: transparent !important;
 }
 
 .track-row:hover {
-  background: rgba(127, 127, 127, 0.1) !important;
+  background: var(--surface-2) !important;
   box-shadow: none !important;
-}
-
-html[data-mode="light"] .track-row:hover {
-  background: rgba(255, 255, 255, 0.45) !important;
 }
 
 .track-row.active {
   background: var(--primary-soft) !important;
-  box-shadow: inset 3px 0 0 var(--primary) !important;
+  box-shadow: none !important;
 }
 
 .track-row.active .track-name {
@@ -160,27 +282,22 @@ html[data-mode="light"] .track-row:hover {
   font-weight: 600;
 }
 
-/* 内容区外壳透明，让全局背景/插画铺满 */
-.layout-content {
-  background: transparent !important;
+.layout-content,
+.app-main {
+  background: var(--bg) !important;
 }
 
-/* 有独立卡片布局时：同样用玻璃，而不是实心白 */
-html[data-layout="paper-split"] .layout-content,
-html[data-layout="glass-float"] .layout-content,
-html[data-layout="soft-dock"] .layout-content {
-  background: var(--glass-bg, rgba(255, 255, 255, 0.08)) !important;
-  border-color: var(--glass-border, var(--border)) !important;
-  backdrop-filter: blur(var(--glass-blur, 16px)) saturate(1.3) !important;
-  -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(1.3) !important;
-  box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+/* 播放条 */
+.player-bar {
+  height: var(--player-height);
+  min-height: var(--player-height);
+  flex-shrink: 0;
+  background: var(--bar-bg);
+  border-top: 1px solid var(--border);
+  color: var(--text);
 }
 
-html[data-mode="light"][data-layout="paper-split"] .layout-content,
-html[data-mode="light"][data-layout="glass-float"] .layout-content,
-html[data-mode="light"][data-layout="soft-dock"] .layout-content {
-  background: var(--glass-bg-light, rgba(255, 255, 255, 0.5)) !important;
-  border-color: rgba(255, 255, 255, 0.7) !important;
+.player-cover {
+  border-radius: var(--cover-radius);
+  overflow: hidden;
 }

@@ -1,28 +1,16 @@
 import type { GlobalThemeOverrides } from "naive-ui";
 
+/** 当前可用皮肤（旧 id 会在 resolve 时映射） */
 export type SkinId =
-  | "midnight-violet"
-  | "cyber-neon"
-  | "vinyl-night"
-  | "glass-ocean"
-  | "paper-light"
-  | "macaron-soft"
-  | "sakura-mist"
-  | "sky-breeze"
-  | "lemon-cream"
-  | "mint-fresh"
-  | "lavender-cloud"
-  | "nordic-snow"
-  | "peach-sunset"
-  | "matcha-latte";
+  | "obsidian"
+  | "cinnabar"
+  | "cobalt"
+  | "slate"
+  | "porcelain"
+  | "paper";
 
-export type LayoutId =
-  | "classic"
-  | "neon-rail"
-  | "vinyl-stage"
-  | "glass-float"
-  | "paper-split"
-  | "soft-dock";
+/** 统一桌面壳布局；皮肤只改色，不改结构 */
+export type LayoutId = "desktop";
 
 export type SkinMode = "dark" | "light";
 

@@ -1,79 +1,47 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, h, computed } from "vue";
-import { NLayout, NLayoutSider, NMenu, NMessageProvider } from "naive-ui";
-import type { MenuOption } from "naive-ui";
+import { ref, onMounted, onUnmounted, computed } from "vue";
+import { NMessageProvider } from "naive-ui";
 import TitleBar from "../components/TitleBar.vue";
 import PlayerBar from "../components/PlayerBar.vue";
+import ChartsPanel from "../components/ChartsPanel.vue";
 import SearchPanel from "../components/SearchPanel.vue";
 import QueuePanel from "../components/QueuePanel.vue";
-import LyricPanel from "../components/LyricPanel.vue";
-import SettingsPanel from "../components/SettingsPanel.vue";
 import DownloadModal from "../components/DownloadModal.vue";
 import DownloadPanel from "../components/DownloadPanel.vue";
 import UpdateDialog from "../components/UpdateDialog.vue";
-import ThemeDecor from "../components/ThemeDecor.vue";
+import ImmersiveLyric from "../components/ImmersiveLyric.vue";
 import Icon from "../components/Icon.vue";
 import { usePlayerStore } from "../stores/player";
 import { useDownloadStore } from "../stores/download";
-import { useSettingsStore } from "../stores/settings";
 import { provideDownloadModal } from "../composables/useDownloadModal";
 import { useUpdater } from "../composables/useUpdater";
-import { getSkin } from "../themes/apply";
+import { useImmersiveLyric } from "../composables/useImmersiveLyric";
+import { openSettingsWindow } from "../utils/windows";
+
+type NavKey = "charts" | "search" | "queue" | "download";
+
+interface NavItem {
+  key: NavKey;
+  label: string;
+  icon: string;
+}
 
 const player = usePlayerStore();
 const downloadStore = useDownloadStore();
-const settings = useSettingsStore();
 const { scheduleSilentCheck } = useUpdater();
-const active = ref("search");
+const { open: lyricOpen, hide: hideLyric } = useImmersiveLyric();
+const active = ref<NavKey>("charts");
 const { show: downloadShow, track: downloadTrack } = provideDownloadModal();
 
-const skin = computed(() => getSkin(settings.skinId));
-const siderWidth = computed(() => {
-  const w = parseInt(skin.value.tokens["sider-width"], 10);
-  return Number.isFinite(w) ? w : 160;
-});
-const collapsedWidth = computed(() =>
-  skin.value.layout === "neon-rail" ? 72 : 64,
-);
+const browseItems: NavItem[] = [
+  { key: "charts", label: "热榜", icon: "ri:fire-fill" },
+  { key: "search", label: "搜索", icon: "ri:search-line" },
+];
 
-function renderIcon(name: string) {
-  return () => h(Icon, { name, size: 18 });
-}
-
-const menuOptions = computed<MenuOption[]>(() => {
-  const neon = skin.value.layout === "neon-rail";
-  return [
-    {
-      label: neon ? "" : "搜索",
-      key: "search",
-      icon: renderIcon("ri:search-line"),
-    },
-    {
-      label: neon ? "" : "队列",
-      key: "queue",
-      icon: renderIcon("ri:play-list-2-line"),
-    },
-    {
-      label: neon
-        ? ""
-        : downloadStore.activeCount
-          ? `下载 (${downloadStore.activeCount})`
-          : "下载",
-      key: "download",
-      icon: renderIcon("ri:download-2-line"),
-    },
-    {
-      label: neon ? "" : "歌词",
-      key: "lyric",
-      icon: renderIcon("ri:file-music-line"),
-    },
-    {
-      label: neon ? "" : "设置",
-      key: "settings",
-      icon: renderIcon("ri:settings-3-line"),
-    },
-  ];
-});
+const libraryItems = computed<NavItem[]>(() => [
+  { key: "queue", label: "播放队列", icon: "ri:play-list-2-line" },
+  { key: "download", label: "下载", icon: "ri:download-2-line" },
+]);
 
 function onKey(e: KeyboardEvent) {
   const tag = (e.target as HTMLElement)?.tagName;
@@ -88,10 +56,19 @@ function onKey(e: KeyboardEvent) {
   }
 }
 
+function goNav(key: NavKey) {
+  if (lyricOpen.value) hideLyric();
+  active.value = key;
+}
+
+async function openSettings() {
+  if (lyricOpen.value) hideLyric();
+  await openSettingsWindow();
+}
+
 onMounted(() => {
   player.setupRemoteControl();
   window.addEventListener("keydown", onKey);
-  // 启动后延迟静默检查更新（仅有新版本时弹窗）
   scheduleSilentCheck(4000);
 });
 
@@ -103,51 +80,107 @@ onUnmounted(() => {
 <template>
   <NMessageProvider>
     <div class="app-shell h-screen flex flex-col overflow-hidden">
-      <ThemeDecor />
       <TitleBar />
-      <div class="layout-body flex-1 min-h-0 flex">
-        <NLayout has-sider class="h-full bg-transparent!">
-          <NLayoutSider
-            bordered
-            collapse-mode="width"
-            :collapsed-width="collapsedWidth"
-            :width="siderWidth"
-            :show-collapsed-content="true"
-            :native-scrollbar="false"
-            class="layout-sider"
-            :style="{
-              background: 'var(--sider-bg)',
-              borderColor: 'var(--border)',
-            }"
-          >
-            <NMenu
-              v-model:value="active"
-              :options="menuOptions"
-              :collapsed="skin.layout === 'neon-rail'"
-              :collapsed-width="collapsedWidth"
-              :collapsed-icon-size="22"
-              class="mt-2"
-            />
-          </NLayoutSider>
-          <div class="layout-content flex-1 min-w-0 min-h-0 overflow-hidden">
-            <SearchPanel v-show="active === 'search'" />
-            <QueuePanel v-show="active === 'queue'" />
-            <DownloadPanel v-show="active === 'download'" />
-            <LyricPanel v-show="active === 'lyric'" />
-            <SettingsPanel v-show="active === 'settings'" />
+
+      <div class="workspace">
+        <nav class="app-nav" aria-label="主导航">
+          <div class="app-nav-brand">
+            <Icon name="ri:music-2-fill" :size="22" color="var(--primary)" />
+            <span class="app-nav-brand-title">Music Desktop</span>
           </div>
-        </NLayout>
+
+          <div class="app-nav-section">浏览</div>
+          <button
+            v-for="item in browseItems"
+            :key="item.key"
+            type="button"
+            class="app-nav-item"
+            :class="{ active: active === item.key && !lyricOpen }"
+            @click="goNav(item.key)"
+          >
+            <span class="nav-icon">
+              <Icon :name="item.icon" :size="18" />
+            </span>
+            <span>{{ item.label }}</span>
+          </button>
+
+          <div class="app-nav-section">音乐库</div>
+          <button
+            v-for="item in libraryItems"
+            :key="item.key"
+            type="button"
+            class="app-nav-item"
+            :class="{ active: active === item.key && !lyricOpen }"
+            @click="goNav(item.key)"
+          >
+            <span class="nav-icon">
+              <Icon :name="item.icon" :size="18" />
+            </span>
+            <span>{{ item.label }}</span>
+            <span
+              v-if="item.key === 'download' && downloadStore.activeCount"
+              class="app-nav-badge"
+            >
+              {{ downloadStore.activeCount }}
+            </span>
+            <span
+              v-else-if="item.key === 'queue' && player.queue.length"
+              class="app-nav-badge"
+              style="background: var(--surface-2); color: var(--text-muted)"
+            >
+              {{ player.queue.length }}
+            </span>
+          </button>
+
+          <div class="app-nav-spacer" />
+
+          <div class="app-nav-section">系统</div>
+          <button type="button" class="app-nav-item" @click="openSettings">
+            <span class="nav-icon">
+              <Icon name="ri:settings-3-line" :size="18" />
+            </span>
+            <span>设置</span>
+          </button>
+        </nav>
+
+        <main class="app-main">
+          <ChartsPanel v-show="active === 'charts'" />
+          <SearchPanel v-show="active === 'search'" />
+          <QueuePanel v-show="active === 'queue'" />
+          <DownloadPanel v-show="active === 'download'" />
+        </main>
       </div>
-      <PlayerBar />
+
+      <!-- 沉浸歌词全屏时隐藏主播放条，控件改在歌词页内 -->
+      <PlayerBar v-show="!lyricOpen" />
+      <ImmersiveLyric />
       <DownloadModal v-model:show="downloadShow" :track="downloadTrack" />
       <UpdateDialog />
-      <div
-        v-if="player.error"
-        class="absolute bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm shadow-lg z-50"
-        style="background: rgba(232, 17, 35, 0.92); color: #fff"
-      >
+      <div v-if="player.error" class="toast-error">
         {{ player.error }}
       </div>
     </div>
   </NMessageProvider>
 </template>
+
+<style scoped>
+.app-nav-spacer {
+  flex: 1;
+  min-height: 8px;
+}
+
+.toast-error {
+  position: absolute;
+  bottom: calc(var(--player-height) + 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  z-index: 50;
+  background: rgba(232, 17, 35, 0.94);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  max-width: min(480px, 80vw);
+}
+</style>
