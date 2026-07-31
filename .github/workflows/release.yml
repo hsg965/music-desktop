@@ -7,8 +7,7 @@
 #
 # 也可在 GitHub → Actions → Release → Run workflow 手动触发
 #
-# macOS：在 macos-latest（Apple Silicon）上交叉编译 universal 包
-# （aarch64 + x86_64 合一），不再依赖已稀缺的 macos-13 Intel runner。
+# 优化：Rust 依赖缓存、mac 仅 aarch64、前端纯 vite、Windows 仅 nsis
 
 name: Release
 
@@ -39,13 +38,13 @@ jobs:
         include:
           - name: windows-x64
             platform: windows-latest
-            args: ""
+            args: "--bundles nsis"
             rust_targets: ""
-          # Apple Silicon runner 上交叉编译 Intel + ARM → 单个 universal .dmg/.app
-          - name: macos-universal
+          # Apple Silicon：只编 aarch64，比 universal 快约一倍
+          - name: macos-aarch64
             platform: macos-latest
-            args: "--target universal-apple-darwin"
-            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            args: "--target aarch64-apple-darwin --bundles dmg,app"
+            rust_targets: aarch64-apple-darwin
 
     runs-on: ${{ matrix.platform }}
 
@@ -68,6 +67,12 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_targets }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          shared-key: ${{ matrix.name }}
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -92,8 +97,8 @@ jobs:
             ### 下载说明
             | 系统 | 文件 |
             |------|------|
-            | Windows x64 | `.exe`（NSIS 安装包）或 `.msi` |
-            | macOS（Intel + Apple Silicon） | `universal` 通用包 `.dmg` / `.app.tar.gz` |
+            | Windows x64 | `.exe`（NSIS 安装包） |
+            | macOS Apple Silicon (M1/M2/M3…) | 文件名含 `aarch64` 的 `.dmg` |
 
             > **macOS 未签名提示**：若提示「无法打开」→ 系统设置 → 隐私与安全性 → 仍要打开。
 
