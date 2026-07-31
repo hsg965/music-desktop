@@ -296,24 +296,18 @@ onUnmounted(() => {
           <template v-if="artist"> · {{ artist }}</template>
         </span>
       </div>
-      <div class="drag-actions no-drag" :class="{ show: activeHover || locked }">
+      <div
+        v-if="!locked"
+        class="drag-actions no-drag"
+        :class="{ show: activeHover }"
+      >
         <button
-          v-if="!locked"
           type="button"
           class="icon-btn"
           title="锁定"
           @click.stop="toggleLock"
         >
           <Icon name="ri:lock-unlock-line" :size="14" />
-        </button>
-        <button
-          v-else
-          type="button"
-          class="icon-btn unlock"
-          title="解锁"
-          @click.stop="unlock"
-        >
-          <Icon name="ri:lock-fill" :size="14" />
         </button>
         <button
           type="button"
@@ -325,6 +319,14 @@ onUnmounted(() => {
         </button>
       </div>
     </header>
+
+    <!-- 锁定态：右上角固定可见的解锁入口（小胶囊，不挡歌词） -->
+    <div v-if="locked" class="lock-chip no-drag">
+      <button type="button" class="lock-chip-btn" title="点击解锁" @click.stop="unlock">
+        <Icon name="ri:lock-fill" :size="13" />
+        <span>解锁</span>
+      </button>
+    </div>
 
     <!-- 歌词：悬停时上移，避开底栏控件 -->
     <div class="stage">
@@ -489,8 +491,7 @@ html[data-mode="light"] .dl.is-hover .drag-meta {
   cursor: pointer;
 }
 
-.dl.is-hover .icon-btn,
-.dl.is-locked .icon-btn {
+.dl.is-hover .icon-btn {
   color: rgba(255, 255, 255, 0.88);
 }
 
@@ -508,13 +509,41 @@ html[data-mode="light"] .dl.is-hover .icon-btn:hover {
   color: var(--text);
 }
 
-.icon-btn.unlock {
-  color: var(--dl-accent, var(--primary));
-}
-
 .icon-btn.close:hover {
   background: #e81123 !important;
   color: #fff !important;
+}
+
+/* 锁定：始终可见的小解锁按钮 */
+.lock-chip {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 8;
+}
+
+.lock-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.lock-chip-btn:hover {
+  background: rgba(0, 0, 0, 0.72);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 /* 歌词：中间区域；悬停时加大底部 padding，躲开控件 */
