@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { NMessageProvider } from "naive-ui";
 import TitleBar from "../components/TitleBar.vue";
 import PlayerBar from "../components/PlayerBar.vue";
 import ChartsPanel from "../components/ChartsPanel.vue";
 import SearchPanel from "../components/SearchPanel.vue";
+import AlbumPanel from "../components/AlbumPanel.vue";
 import QueuePanel from "../components/QueuePanel.vue";
 import DownloadModal from "../components/DownloadModal.vue";
 import DownloadPanel from "../components/DownloadPanel.vue";
@@ -26,12 +28,17 @@ interface NavItem {
   icon: string;
 }
 
+const route = useRoute();
+const router = useRouter();
 const player = usePlayerStore();
 const downloadStore = useDownloadStore();
 const { scheduleSilentCheck } = useUpdater();
 const { open: lyricOpen, hide: hideLyric } = useImmersiveLyric();
 const active = ref<NavKey>("charts");
 const { show: downloadShow, track: downloadTrack } = provideDownloadModal();
+
+/** 专辑页：独立路由，侧栏仍显示「搜索」选中 */
+const isAlbumRoute = computed(() => route.name === "album");
 
 const browseItems: NavItem[] = [
   { key: "charts", label: "热榜", icon: "ri:fire-fill" },
@@ -58,6 +65,10 @@ function onKey(e: KeyboardEvent) {
 
 function goNav(key: NavKey) {
   if (lyricOpen.value) hideLyric();
+  // 从专辑离开时清掉路由，侧栏项本身不变
+  if (isAlbumRoute.value) {
+    router.replace({ name: "main" });
+  }
   active.value = key;
 }
 
@@ -144,10 +155,12 @@ onUnmounted(() => {
         </nav>
 
         <main class="app-main">
-          <ChartsPanel v-show="active === 'charts'" />
-          <SearchPanel v-show="active === 'search'" />
-          <QueuePanel v-show="active === 'queue'" />
-          <DownloadPanel v-show="active === 'download'" />
+          <!-- 专辑为独立路由；SearchPanel 始终 v-show 挂载，返回不丢搜索结果 -->
+          <AlbumPanel v-if="isAlbumRoute" />
+          <ChartsPanel v-show="!isAlbumRoute && active === 'charts'" />
+          <SearchPanel v-show="!isAlbumRoute && active === 'search'" />
+          <QueuePanel v-show="!isAlbumRoute && active === 'queue'" />
+          <DownloadPanel v-show="!isAlbumRoute && active === 'download'" />
         </main>
       </div>
 

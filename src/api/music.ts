@@ -83,35 +83,34 @@ async function rawApiGet<T>(params: Record<string, string | number>): Promise<T>
 async function apiGet<T>(
   params: Record<string, string | number>,
   ttlMs: number,
+  options?: { bypassCache?: boolean },
 ): Promise<T> {
   const key = cacheKey(
     Object.fromEntries(
       Object.entries(params).map(([k, v]) => [k, String(v)]),
     ),
   );
-  return cachedRequest(key, ttlMs, () => rawApiGet<T>(params));
+  return cachedRequest(key, ttlMs, () => rawApiGet<T>(params), options);
 }
 
-/** 规范化音源参数（去掉历史 _album 后缀） */
+/** 规范化音源参数（去掉 _album 后缀，用于播放 / 歌词 / 封面） */
 export function resolveSearchSource(source: string): string {
   return String(source || "netease").replace(/_album$/i, "");
 }
 
-/** 搜索曲目 */
-export async function searchTracks(options: {
-  name: string;
-  source?: MusicSource | string;
-  count?: number;
-  pages?: number;
-}): Promise<Track[]> {
-  const {
-    name,
-    source = "netease",
-    count = 20,
-    pages = 1,
-  } = options;
+/** 专辑曲目检索用的 source，如 netease_album */
+export function toAlbumSearchSource(source: string): string {
+  const base = resolveSearchSource(source);
+  return `${base}_album`;
+}
 
-  const apiSource = resolveSearchSource(source);
+async function searchRaw(
+  name: string,
+  apiSource: string,
+  count: number,
+  pages: number,
+  bypassCache = false,
+): Promise<Track[]> {
   const data = await apiGet<Track[] | { data?: Track[] } | null>(
     {
       types: "search",
@@ -119,15 +118,72 @@ export async function searchTracks(options: {
       name,
       count,
       pages,
+      s: crc32Hex(name),
     },
     TTL.search,
+    { bypassCache },
   );
 
-  if (Array.isArray(data)) return normalizeTracks(data, apiSource);
+  // 归一化时用去掉 _album 的音源，保证播放 / 歌词链路正确
+  const playSource = resolveSearchSource(apiSource);
+  if (Array.isArray(data)) return normalizeTracks(data, playSource);
   if (data && Array.isArray((data as { data?: Track[] }).data)) {
-    return normalizeTracks((data as { data: Track[] }).data, apiSource);
+    return normalizeTracks((data as { data: Track[] }).data, playSource);
   }
   return [];
+}
+
+/** 搜索曲目；force=true 时跳过缓存（用户主动点搜索） */
+export async function searchTracks(options: {
+  name: string;
+  source?: MusicSource | string;
+  count?: number;
+  pages?: number;
+  force?: boolean;
+}): Promise<Track[]> {
+  const {
+    name,
+    source = "netease",
+    count = 20,
+    pages = 1,
+    force = false,
+  } = options;
+
+  return searchRaw(
+    name,
+    resolveSearchSource(source),
+    count,
+    pages,
+    force,
+  );
+}
+
+/**
+ * 按专辑名拉取专辑内曲目（source 使用 xxx_album）。
+ * 接口无 album_id，只能用专辑名字符串检索。
+ */
+export async function searchAlbumTracks(options: {
+  name: string;
+  source?: MusicSource | string;
+  count?: number;
+  pages?: number;
+  force?: boolean;
+}): Promise<Track[]> {
+  const {
+    name,
+    source = "netease",
+    count = 20,
+    pages = 1,
+    force = false,
+  } = options;
+
+  return searchRaw(
+    name,
+    toAlbumSearchSource(source),
+    count,
+    pages,
+    force,
+  );
 }
 
 function normalizeTracks(list: Track[], fallbackSource: string): Track[] {

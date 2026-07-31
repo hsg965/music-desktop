@@ -75,6 +75,22 @@ export function setCache<T>(key: string, data: T, ttlMs: number) {
   cache.set(key, { data, expireAt: Date.now() + ttlMs });
 }
 
+/** 空结果不进缓存（避免接口偶发空数组被锁 10 分钟） */
+function isEmptyCacheValue(data: unknown): boolean {
+  if (data == null) return true;
+  if (Array.isArray(data) && data.length === 0) return true;
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    "data" in data &&
+    Array.isArray((data as { data?: unknown }).data) &&
+    ((data as { data: unknown[] }).data?.length ?? 0) === 0
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /** 带缓存 + 去重 + 限流 的请求封装 */
 export async function cachedRequest<T>(
   key: string,
@@ -85,23 +101,34 @@ export async function cachedRequest<T>(
   if (!options?.bypassCache) {
     const cached = getCached<T>(key);
     if (cached !== undefined) return cached;
+  } else {
+    // 强制刷新时清掉旧缓存，避免成功后仍被旧数据覆盖语义混乱
+    cache.delete(key);
   }
 
-  const existing = inflight.get(key);
-  if (existing) return existing as Promise<T>;
+  // bypass 时也不复用 in-flight 的旧请求结果
+  if (!options?.bypassCache) {
+    const existing = inflight.get(key);
+    if (existing) return existing as Promise<T>;
+  }
 
   const promise = (async () => {
     acquireRequestSlot();
     try {
       const data = await fetcher();
-      setCache(key, data, ttlMs);
+      // 空结果不缓存，方便用户马上重试
+      if (!isEmptyCacheValue(data)) {
+        setCache(key, data, ttlMs);
+      }
       return data;
     } finally {
       inflight.delete(key);
     }
   })();
 
-  inflight.set(key, promise);
+  if (!options?.bypassCache) {
+    inflight.set(key, promise);
+  }
   return promise;
 }
 

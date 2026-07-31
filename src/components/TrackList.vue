@@ -11,11 +11,23 @@ const props = withDefaults(
     removable?: boolean;
     /** 是否启用虚拟列表（长列表默认开） */
     virtual?: boolean;
+    /** 专辑名可点击（仅搜索等入口开启） */
+    albumLink?: boolean;
+    /** 启用滚动加载（展示底部状态文案） */
+    infinite?: boolean;
+    /** 是否还有更多 */
+    hasMore?: boolean;
+    /** 正在加载更多 */
+    loadingMore?: boolean;
   }>(),
   {
     showIndex: true,
     removable: false,
     virtual: true,
+    albumLink: false,
+    infinite: false,
+    hasMore: false,
+    loadingMore: false,
   },
 );
 
@@ -24,10 +36,27 @@ const emit = defineEmits<{
   add: [track: Track];
   remove: [index: number];
   download: [track: Track];
+  openAlbum: [track: Track];
+  /** 接近底部时触发，父级应加载下一页 */
+  loadMore: [];
 }>();
+
+function canOpenAlbum(t: Track) {
+  if (!props.albumLink) return false;
+  const name = (t.album || "").trim();
+  return !!name && name !== "—" && name !== "未知专辑";
+}
+
+function onAlbumClick(track: Track, e: Event) {
+  e.stopPropagation();
+  if (!canOpenAlbum(track)) return;
+  emit("openAlbum", track);
+}
 
 const ROW_H = 52;
 const OVERSCAN = 8;
+/** 距底部多少 px 触发加载更多 */
+const LOAD_MORE_OFFSET = 120;
 
 const scroller = ref<HTMLElement | null>(null);
 const scrollTop = ref(0);
@@ -36,13 +65,29 @@ const viewportH = ref(480);
 /** 用 shallowRef 减少大数组响应式开销 */
 const list = shallowRef<Track[]>([]);
 
+function trackKey(t: Track) {
+  return `${t.source}-${t.id}`;
+}
+
+function isAppendUpdate(prev: Track[], next: Track[]) {
+  if (!prev.length || next.length <= prev.length) return false;
+  return (
+    trackKey(prev[0]) === trackKey(next[0]) &&
+    trackKey(prev[prev.length - 1]) === trackKey(next[prev.length - 1])
+  );
+}
+
 watch(
   () => props.tracks,
   (v) => {
+    const prev = list.value;
+    const append = isAppendUpdate(prev, v);
     list.value = v;
-    // 切歌单时回到顶部
-    if (scroller.value) scroller.value.scrollTop = 0;
-    scrollTop.value = 0;
+    // 整表替换时回顶；滚动追加时保持位置
+    if (!append) {
+      if (scroller.value) scroller.value.scrollTop = 0;
+      scrollTop.value = 0;
+    }
   },
   { immediate: true },
 );
@@ -80,18 +125,34 @@ const padBottom = computed(() =>
     : 0,
 );
 
+const showFooter = computed(
+  () => props.infinite && list.value.length > 0,
+);
+
+const footerText = computed(() => {
+  if (props.loadingMore) return "加载中…";
+  if (props.hasMore) return "滚动加载更多（无数据时可再滚一次重试）";
+  return "没有更多了";
+});
+
 function artistText(t: Track) {
   return (t.artist || []).join(" / ") || "未知歌手";
 }
 
-function trackKey(t: Track) {
-  return `${t.source}-${t.id}`;
+function checkLoadMore() {
+  const el = scroller.value;
+  if (!el || !props.infinite || !props.hasMore || props.loadingMore) return;
+  const remain = el.scrollHeight - el.scrollTop - el.clientHeight;
+  if (remain <= LOAD_MORE_OFFSET) {
+    emit("loadMore");
+  }
 }
 
 function onScroll() {
   const el = scroller.value;
   if (!el) return;
   scrollTop.value = el.scrollTop;
+  checkLoadMore();
 }
 
 let ro: ResizeObserver | null = null;
@@ -104,6 +165,8 @@ onMounted(() => {
   ro = new ResizeObserver((entries) => {
     const h = entries[0]?.contentRect.height;
     if (h) viewportH.value = h;
+    // 内容不足一屏时补一次（仅首屏填充，不在空响应后连发）
+    checkLoadMore();
   });
   ro.observe(el);
 });
@@ -112,6 +175,16 @@ onUnmounted(() => {
   scroller.value?.removeEventListener("scroll", onScroll);
   ro?.disconnect();
 });
+
+// 列表成功变长且仍贴底时再补拉；空响应结束 loading 后不自动连发（避免限流空数据死循环）
+watch(
+  () => props.tracks.length,
+  (n, o) => {
+    if (n > (o ?? 0)) {
+      requestAnimationFrame(() => checkLoadMore());
+    }
+  },
+);
 </script>
 
 <template>
@@ -175,7 +248,18 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="col-album truncate">{{ track.album || "—" }}</div>
+        <div class="col-album truncate">
+          <button
+            v-if="canOpenAlbum(track)"
+            type="button"
+            class="album-link truncate"
+            :title="`查看专辑：${track.album}`"
+            @click="onAlbumClick(track, $event)"
+          >
+            {{ track.album }}
+          </button>
+          <span v-else>{{ track.album || "—" }}</span>
+        </div>
 
         <div class="col-actions">
           <button
@@ -216,6 +300,11 @@ onUnmounted(() => {
       </div>
 
       <div v-if="useVirtual" class="pad" :style="{ height: padBottom + 'px' }" />
+
+      <div v-if="showFooter" class="list-footer">
+        <span v-if="loadingMore" class="footer-spin" aria-hidden="true" />
+        <span>{{ footerText }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -361,6 +450,24 @@ onUnmounted(() => {
   color: var(--text-muted);
 }
 
+.album-link {
+  max-width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.album-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 .col-actions {
   display: flex;
   align-items: center;
@@ -396,6 +503,32 @@ onUnmounted(() => {
 .pad {
   width: 100%;
   pointer-events: none;
+}
+
+.list-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 8px 16px;
+  font-size: 12px;
+  color: var(--text-faint);
+  user-select: none;
+}
+
+.footer-spin {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: track-spin 0.7s linear infinite;
+}
+
+@keyframes track-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 860px) {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import { NButton, NEmpty, NSpin, useMessage } from "naive-ui";
 import { CHART_LIST, fetchPlaylist } from "../api/music";
 import type { PlaylistDetail, Track } from "../types/music";
@@ -8,6 +9,7 @@ import TrackList from "./TrackList.vue";
 import Icon from "./Icon.vue";
 import { useDownloadModal } from "../composables/useDownloadModal";
 
+const router = useRouter();
 const player = usePlayerStore();
 const message = useMessage();
 const { open: openDownload } = useDownloadModal();
@@ -90,7 +92,12 @@ function selectChart(id: string) {
 }
 
 async function onPlay(track: Track) {
-  await player.playTrack(track);
+  // 以当前榜单为播放上下文，上下曲继续列表而非旧队列
+  const list = tracks.value;
+  const idx = list.findIndex(
+    (t) => `${t.source}-${t.id}` === `${track.source}-${track.id}`,
+  );
+  await player.playAll(list, idx >= 0 ? idx : 0);
   if (player.error) message.error(player.error);
 }
 
@@ -117,6 +124,21 @@ function addAllToQueue() {
   player.addManyToQueue(tracks.value);
   const added = player.queue.length - before;
   message.success(added > 0 ? `已加入 ${added} 首到队列` : "歌曲已在队列中");
+}
+
+function openAlbum(track: Track) {
+  const name = (track.album || "").trim();
+  if (!name) {
+    message.warning("该曲目没有专辑信息");
+    return;
+  }
+  void router.push({
+    name: "album",
+    query: {
+      name,
+      source: String(track.source || "netease"),
+    },
+  });
 }
 
 function refresh() {
@@ -223,9 +245,11 @@ onMounted(() => {
           :key="activeId"
           :tracks="tracks"
           :active-key="activeTrackKey"
+          album-link
           @play="onPlay"
           @add="onAdd"
           @download="openDownload"
+          @open-album="openAlbum"
         />
         <div v-else class="empty-box">
           <NEmpty :description="loading ? '加载中…' : '暂无榜单数据'" />

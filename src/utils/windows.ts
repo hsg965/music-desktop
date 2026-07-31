@@ -58,9 +58,9 @@ export async function openDesktopLyric() {
     const win = new WebviewWindow("lyric", {
       url: "/#/lyric",
       title: "桌面歌词",
-      width: 720,
+      width: 480,
       height: 200,
-      minWidth: 420,
+      minWidth: 320,
       minHeight: 160,
       decorations: false,
       alwaysOnTop: true,

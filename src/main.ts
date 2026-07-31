@@ -26,14 +26,16 @@ window.addEventListener("storage", (e) => {
   if (e.key === "music-desktop-settings") bootSkin();
 });
 
-// 禁用 WebView 默认右键菜单（桌面应用体验）
-window.addEventListener(
-  "contextmenu",
-  (e) => {
-    e.preventDefault();
-  },
-  { capture: true },
-);
+// 生产环境禁用 WebView 默认右键菜单；开发环境保留以便「检查」调试
+if (import.meta.env.PROD) {
+  window.addEventListener(
+    "contextmenu",
+    (e) => {
+      e.preventDefault();
+    },
+    { capture: true },
+  );
+}
 
 const app = createApp(App);
 
