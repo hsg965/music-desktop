@@ -15,7 +15,8 @@ import {
   getRateLimitStatus,
 } from "./rateLimit";
 
-const BASE = "https://music-api.gdstudio.xyz/api.php";
+const BASE = "https://music.gdstudio.xyz/api.php";
+// const BASE = "https://music-api.gdstudio.xyz/api.php";
 
 /** 缓存 TTL */
 const TTL = {
@@ -93,15 +94,21 @@ async function apiGet<T>(
   return cachedRequest(key, ttlMs, () => rawApiGet<T>(params), options);
 }
 
-/** 规范化音源参数（去掉 _album 后缀，用于播放 / 歌词 / 封面） */
+/** 规范化音源参数（去掉 _album / _playlist 后缀，用于播放 / 歌词 / 封面） */
 export function resolveSearchSource(source: string): string {
-  return String(source || "netease").replace(/_album$/i, "");
+  return String(source || "netease").replace(/_(album|playlist)$/i, "");
 }
 
 /** 专辑曲目检索用的 source，如 netease_album */
 export function toAlbumSearchSource(source: string): string {
   const base = resolveSearchSource(source);
   return `${base}_album`;
+}
+
+/** 歌单曲目检索用的 source，如 netease_playlist */
+export function toPlaylistSearchSource(source: string): string {
+  const base = resolveSearchSource(source);
+  return `${base}_playlist`;
 }
 
 async function searchRaw(
@@ -124,7 +131,7 @@ async function searchRaw(
     { bypassCache },
   );
 
-  // 归一化时用去掉 _album 的音源，保证播放 / 歌词链路正确
+  // 归一化时用去掉 _album/_playlist 的音源，保证播放 / 歌词链路正确
   const playSource = resolveSearchSource(apiSource);
   if (Array.isArray(data)) return normalizeTracks(data, playSource);
   if (data && Array.isArray((data as { data?: Track[] }).data)) {
@@ -180,6 +187,34 @@ export async function searchAlbumTracks(options: {
   return searchRaw(
     name,
     toAlbumSearchSource(source),
+    count,
+    pages,
+    force,
+  );
+}
+
+/**
+ * 按歌单名拉取歌单内曲目（source 使用 xxx_playlist）。
+ * 逻辑与专辑检索一致。
+ */
+export async function searchPlaylistTracks(options: {
+  name: string;
+  source?: MusicSource | string;
+  count?: number;
+  pages?: number;
+  force?: boolean;
+}): Promise<Track[]> {
+  const {
+    name,
+    source = "netease",
+    count = 20,
+    pages = 1,
+    force = false,
+  } = options;
+
+  return searchRaw(
+    name,
+    toPlaylistSearchSource(source),
     count,
     pages,
     force,
@@ -305,7 +340,7 @@ export async function fetchPlayUrl(
     const data = await apiGet<UrlResult | null>(
       {
         types: "url",
-        source: String(source).replace(/_album$/i, ""),
+        source: resolveSearchSource(source),
         id: String(id),
         br,
       },
@@ -329,7 +364,7 @@ export async function fetchPicUrl(
     const data = await apiGet<PicResult | null>(
       {
         types: "pic",
-        source: String(source).replace(/_album$/i, ""),
+        source: resolveSearchSource(source),
         id: String(picId),
         size,
       },
@@ -351,7 +386,7 @@ export async function fetchLyric(
     const data = await apiGet<LyricResult | null>(
       {
         types: "lyric",
-        source: String(source).replace(/_album$/i, ""),
+        source: resolveSearchSource(source),
         id: String(lyricId),
       },
       TTL.lyric,

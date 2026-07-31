@@ -7,12 +7,19 @@ import {
   NSpin,
   useMessage,
 } from "naive-ui";
-import { fetchPicUrl, searchAlbumTracks } from "../api/music";
+import {
+  fetchPicUrl,
+  searchAlbumTracks,
+  searchPlaylistTracks,
+} from "../api/music";
 import type { Track } from "../types/music";
 import { usePlayerStore } from "../stores/player";
 import TrackList from "./TrackList.vue";
 import Icon from "./Icon.vue";
 import { useDownloadModal } from "../composables/useDownloadModal";
+
+/** 专辑 / 歌单共用详情页 */
+type CollectionKind = "album" | "playlist";
 
 const route = useRoute();
 const router = useRouter();
@@ -22,19 +29,29 @@ const { open: openDownload } = useDownloadModal();
 
 const loading = ref(false);
 const loadingMore = ref(false);
+const loadError = ref(false);
 const playingAll = ref(false);
 const tracks = ref<Track[]>([]);
 const page = ref(1);
 const pageSize = 20;
-const hasMore = ref(false);
 const coverUrl = ref("");
 const errorText = ref("");
 
 let loadSeq = 0;
-let loadMoreCooldownUntil = 0;
 
-const albumName = computed(() => String(route.query.name || "").trim());
+const kind = computed<CollectionKind>(() =>
+  route.name === "playlist" ? "playlist" : "album",
+);
+const collectionName = computed(() => String(route.query.name || "").trim());
 const source = computed(() => String(route.query.source || "netease").trim() || "netease");
+
+const kindLabel = computed(() => (kind.value === "playlist" ? "歌单" : "专辑"));
+const unknownName = computed(() =>
+  kind.value === "playlist" ? "未知歌单" : "未知专辑",
+);
+const coverIcon = computed(() =>
+  kind.value === "playlist" ? "ri:play-list-2-line" : "ri:album-line",
+);
 
 const artistSummary = computed(() => {
   const counts = new Map<string, number>();
@@ -45,9 +62,28 @@ const artistSummary = computed(() => {
       counts.set(name, (counts.get(name) || 0) + 1);
     }
   }
-  if (!counts.size) return "未知歌手";
+  if (!counts.size) return kind.value === "playlist" ? "歌单" : "未知歌手";
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
 });
+
+async function fetchCollectionPage(name: string, pages: number, force: boolean) {
+  if (kind.value === "playlist") {
+    return searchPlaylistTracks({
+      name,
+      source: source.value,
+      count: pageSize,
+      pages,
+      force,
+    });
+  }
+  return searchAlbumTracks({
+    name,
+    source: source.value,
+    count: pageSize,
+    pages,
+    force,
+  });
+}
 
 const activeTrackKey = computed(() => {
   const t = player.currentTrack;
@@ -81,13 +117,13 @@ async function resolveCover(list: Track[]) {
   }
 }
 
-async function loadAlbum(reset: boolean) {
-  const name = albumName.value;
+async function loadCollection(reset: boolean) {
+  const name = collectionName.value;
   if (!name) {
     tracks.value = [];
-    errorText.value = "缺少专辑名";
-    hasMore.value = false;
+    errorText.value = `缺少${kindLabel.value}名`;
     coverUrl.value = "";
+    loadError.value = false;
     return;
   }
 
@@ -96,25 +132,19 @@ async function loadAlbum(reset: boolean) {
     page.value = 1;
     loading.value = true;
     loadingMore.value = false;
-    hasMore.value = false;
+    loadError.value = false;
     errorText.value = "";
     try {
-      const list = await searchAlbumTracks({
-        name,
-        source: source.value,
-        count: pageSize,
-        pages: 1,
-        force: true,
-      });
+      const list = await fetchCollectionPage(name, 1, true);
       if (seq !== loadSeq) return;
 
       tracks.value = list;
-      hasMore.value = list.length >= pageSize;
-      loadMoreCooldownUntil = 0;
+      loadError.value = false;
 
       if (!list.length) {
-        errorText.value = "暂无专辑曲目（可能音源不支持、专辑名无匹配或接口限流）";
+        errorText.value = `暂无${kindLabel.value}曲目（可能音源不支持、名称无匹配或接口限流）`;
         coverUrl.value = "";
+        loadError.value = true;
         return;
       }
 
@@ -122,9 +152,9 @@ async function loadAlbum(reset: boolean) {
     } catch (e) {
       if (seq !== loadSeq) return;
       tracks.value = [];
-      hasMore.value = false;
       coverUrl.value = "";
-      errorText.value = e instanceof Error ? e.message : "加载专辑失败";
+      loadError.value = true;
+      errorText.value = e instanceof Error ? e.message : `加载${kindLabel.value}失败`;
       message.error(errorText.value);
     } finally {
       if (seq === loadSeq) loading.value = false;
@@ -132,43 +162,36 @@ async function loadAlbum(reset: boolean) {
     return;
   }
 
-  // load more：空响应不关 hasMore，页码不推进，可再滚重试
-  if (loading.value || loadingMore.value || !hasMore.value) return;
-  if (Date.now() < loadMoreCooldownUntil) return;
+  await loadMoreTracks();
+}
+
+/** 加载更多：永不「没有更多」；空/失败可点或再滚重试 */
+async function loadMoreTracks() {
+  const name = collectionName.value;
+  if (!name) return;
+  if (loading.value || loadingMore.value) return;
+
   const seq = loadSeq;
   const nextPage = page.value + 1;
   loadingMore.value = true;
+  loadError.value = false;
   try {
-    const list = await searchAlbumTracks({
-      name,
-      source: source.value,
-      count: pageSize,
-      pages: nextPage,
-      force: true,
-    });
+    const list = await fetchCollectionPage(name, nextPage, true);
     if (seq !== loadSeq) return;
 
     if (!list.length) {
-      loadMoreCooldownUntil = Date.now() + 2500;
+      loadError.value = true;
       return;
     }
 
     const before = tracks.value.length;
     tracks.value = mergeUnique(tracks.value, list);
     const added = tracks.value.length - before;
-
-    if (added === 0) {
-      page.value = nextPage;
-      loadMoreCooldownUntil = Date.now() + 1500;
-      hasMore.value = true;
-      return;
-    }
-
     page.value = nextPage;
-    hasMore.value = list.length >= pageSize;
+    if (added === 0) loadError.value = true;
   } catch (e) {
     if (seq !== loadSeq) return;
-    loadMoreCooldownUntil = Date.now() + 2500;
+    loadError.value = true;
     message.error(e instanceof Error ? e.message : "加载更多失败");
   } finally {
     if (seq === loadSeq) loadingMore.value = false;
@@ -176,9 +199,9 @@ async function loadAlbum(reset: boolean) {
 }
 
 watch(
-  () => [route.query.name, route.query.source] as const,
+  () => [route.name, route.query.name, route.query.source] as const,
   () => {
-    void loadAlbum(true);
+    void loadCollection(true);
   },
   { immediate: true },
 );
@@ -192,7 +215,7 @@ function goBack() {
 }
 
 async function onPlay(track: Track) {
-  // 以当前专辑已加载曲目为播放上下文，上下曲继续专辑列表
+  // 以当前列表为播放上下文，上下曲继续本专辑/歌单
   const list = tracks.value;
   const idx = list.findIndex(
     (t) => `${t.source}-${t.id}` === `${track.source}-${track.id}`,
@@ -246,15 +269,15 @@ function addLoadedToQueue() {
         />
         <Icon
           v-else
-          name="ri:album-line"
+          :name="coverIcon"
           :size="36"
           color="var(--text-faint)"
         />
       </div>
       <div class="hero-meta min-w-0">
-        <div class="hero-label">专辑</div>
-        <h1 class="page-title truncate" :title="albumName || '未知专辑'">
-          {{ albumName || "未知专辑" }}
+        <div class="hero-label">{{ kindLabel }}</div>
+        <h1 class="page-title truncate" :title="collectionName || unknownName">
+          {{ collectionName || unknownName }}
         </h1>
         <p class="page-subtitle truncate">
           {{ artistSummary }}
@@ -293,23 +316,23 @@ function addLoadedToQueue() {
           :active-key="activeTrackKey"
           :album-link="false"
           infinite
-          :has-more="hasMore"
           :loading-more="loadingMore"
+          :load-error="loadError"
           @play="onPlay"
           @add="onAdd"
           @download="openDownload"
-          @load-more="loadAlbum(false)"
+          @load-more="loadMoreTracks"
         />
         <div v-else class="empty-box">
           <NEmpty :description="errorText || '暂无曲目'" />
           <NButton
-            v-if="albumName"
+            v-if="collectionName"
             size="small"
             class="mt-3"
             :loading="loading"
-            @click="loadAlbum(true)"
+            @click="loadCollection(true)"
           >
-            重试
+            {{ loadError ? "点击加载更多" : "重试" }}
           </NButton>
         </div>
       </NSpin>

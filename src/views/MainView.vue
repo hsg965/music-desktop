@@ -37,8 +37,10 @@ const { open: lyricOpen, hide: hideLyric } = useImmersiveLyric();
 const active = ref<NavKey>("charts");
 const { show: downloadShow, track: downloadTrack } = provideDownloadModal();
 
-/** 专辑页：独立路由，侧栏仍显示「搜索」选中 */
-const isAlbumRoute = computed(() => route.name === "album");
+/** 专辑 / 歌单详情：独立路由，侧栏不新增入口 */
+const isCollectionRoute = computed(
+  () => route.name === "album" || route.name === "playlist",
+);
 
 const browseItems: NavItem[] = [
   { key: "charts", label: "热榜", icon: "ri:fire-fill" },
@@ -65,8 +67,8 @@ function onKey(e: KeyboardEvent) {
 
 function goNav(key: NavKey) {
   if (lyricOpen.value) hideLyric();
-  // 从专辑离开时清掉路由，侧栏项本身不变
-  if (isAlbumRoute.value) {
+  // 从专辑/歌单离开时清掉路由，侧栏项本身不变
+  if (isCollectionRoute.value) {
     router.replace({ name: "main" });
   }
   active.value = key;
@@ -155,12 +157,12 @@ onUnmounted(() => {
         </nav>
 
         <main class="app-main">
-          <!-- 专辑为独立路由；SearchPanel 始终 v-show 挂载，返回不丢搜索结果 -->
-          <AlbumPanel v-if="isAlbumRoute" />
-          <ChartsPanel v-show="!isAlbumRoute && active === 'charts'" />
-          <SearchPanel v-show="!isAlbumRoute && active === 'search'" />
-          <QueuePanel v-show="!isAlbumRoute && active === 'queue'" />
-          <DownloadPanel v-show="!isAlbumRoute && active === 'download'" />
+          <!-- 专辑/歌单为独立路由；SearchPanel 始终 v-show 挂载，返回不丢搜索结果 -->
+          <AlbumPanel v-if="isCollectionRoute" />
+          <ChartsPanel v-show="!isCollectionRoute && active === 'charts'" />
+          <SearchPanel v-show="!isCollectionRoute && active === 'search'" />
+          <QueuePanel v-show="!isCollectionRoute && active === 'queue'" />
+          <DownloadPanel v-show="!isCollectionRoute && active === 'download'" />
         </main>
       </div>
 

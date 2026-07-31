@@ -10,7 +10,12 @@ import {
   NTag,
   useMessage,
 } from "naive-ui";
-import { MUSIC_SOURCES, searchAlbumTracks, searchTracks } from "../api/music";
+import {
+  MUSIC_SOURCES,
+  searchAlbumTracks,
+  searchPlaylistTracks,
+  searchTracks,
+} from "../api/music";
 import type { Track } from "../types/music";
 import { useSettingsStore } from "../stores/settings";
 import { usePlayerStore } from "../stores/player";
@@ -24,16 +29,16 @@ import {
   removeSearchHistoryItem,
 } from "../utils/searchHistory";
 
-type SearchTab = "song" | "album";
+type SearchTab = "song" | "album" | "playlist";
 
-interface AlbumHit {
+interface CollectionHit {
   key: string;
   name: string;
   source: string;
   artist: string;
   picUrl?: string;
   pic_id?: string | number;
-  /** 当前已加载结果中出现的曲目数（非全专曲数） */
+  /** 当前已加载结果中出现的曲目数 */
   hitCount: number;
 }
 
@@ -52,7 +57,7 @@ const playingAll = ref(false);
 const results = ref<Track[]>([]);
 const page = ref(1);
 const pageSize = 20;
-const hasMore = ref(false);
+const loadError = ref(false);
 const history = ref<string[]>([]);
 const inputFocused = ref(false);
 /** 是否已发起过至少一次搜索（用于空态文案） */
@@ -60,28 +65,32 @@ const hasSearched = ref(false);
 
 /** 防止滚动连发多次 loadMore */
 let loadSeq = 0;
-/** 空响应后的冷却，避免贴底死循环打接口 */
-let loadMoreCooldownUntil = 0;
 
 const sourceOptions = MUSIC_SOURCES.map((s) => ({
   label: s.label,
   value: s.value,
 }));
 
-const placeholder = computed(() =>
-  tab.value === "album"
-    ? "输入专辑名搜索"
-    : "输入歌曲名 / 歌手 / 关键词",
+const isCollectionTab = computed(
+  () => tab.value === "album" || tab.value === "playlist",
 );
+
+const placeholder = computed(() => {
+  if (tab.value === "album") return "输入专辑名搜索";
+  if (tab.value === "playlist") return "输入歌单名搜索";
+  return "输入歌曲名 / 歌手 / 关键词";
+});
 
 const emptyDesc = computed(() => {
   if (!hasSearched.value) {
     if (history.value.length) return "输入关键词搜索，或点击历史记录";
-    return tab.value === "album"
-      ? "切换到专辑后输入专辑名搜索"
-      : "输入歌曲名 / 歌手 / 关键词搜索";
+    if (tab.value === "album") return "切换到专辑后输入专辑名搜索";
+    if (tab.value === "playlist") return "切换到歌单后输入歌单名搜索";
+    return "输入歌曲名 / 歌手 / 关键词搜索";
   }
-  return tab.value === "album" ? "没有找到相关专辑" : "没有找到相关歌曲";
+  if (tab.value === "album") return "没有找到相关专辑";
+  if (tab.value === "playlist") return "没有找到相关歌单";
+  return "没有找到相关歌曲";
 });
 
 const activeTrackKey = computed(() => {
@@ -89,12 +98,16 @@ const activeTrackKey = computed(() => {
   return t ? `${t.source}-${t.id}` : "";
 });
 
-/** 专辑 Tab：按专辑名聚合（接口无 album 实体，只能从曲目反推） */
-const albumHits = computed((): AlbumHit[] => {
-  if (tab.value !== "album") return [];
-  const map = new Map<string, AlbumHit>();
+/**
+ * 专辑 / 歌单 Tab：按 album 字段聚合为卡片（接口无独立实体，从曲目反推）。
+ * 歌单模式下 album 字段常为歌单名（与专辑检索约定一致）。
+ */
+const collectionHits = computed((): CollectionHit[] => {
+  if (!isCollectionTab.value) return [];
+  const fallbackName = tab.value === "playlist" ? "未知歌单" : "未知专辑";
+  const map = new Map<string, CollectionHit>();
   for (const t of results.value) {
-    const name = (t.album || "").trim() || "未知专辑";
+    const name = (t.album || "").trim() || fallbackName;
     const source = String(t.source || settings.source || "netease");
     const key = `${source}::${name}`;
     const existing = map.get(key);
@@ -149,6 +162,15 @@ async function fetchPage(name: string, pages: number, force = false) {
       force,
     });
   }
+  if (tab.value === "playlist") {
+    return searchPlaylistTracks({
+      name,
+      source: settings.source,
+      count: pageSize,
+      pages,
+      force,
+    });
+  }
   return searchTracks({
     name,
     source: settings.source,
@@ -169,8 +191,8 @@ async function doSearch() {
   page.value = 1;
   loading.value = true;
   loadingMore.value = false;
+  loadError.value = false;
   inputFocused.value = false;
-  hasMore.value = false;
   hasSearched.value = true;
 
   try {
@@ -179,68 +201,60 @@ async function doSearch() {
     if (seq !== loadSeq) return;
 
     results.value = list;
-    // 首屏：满页才认为可能还有下一页；空首屏不开启滚动加载
-    hasMore.value = list.length >= pageSize;
-    loadMoreCooldownUntil = 0;
+    loadError.value = false;
     history.value = pushSearchHistory(name, history.value);
     if (!list.length) {
-      message.info(tab.value === "album" ? "没有找到相关专辑" : "没有找到相关歌曲");
+      const tip =
+        tab.value === "album"
+          ? "没有找到相关专辑"
+          : tab.value === "playlist"
+            ? "没有找到相关歌单"
+            : "没有找到相关歌曲";
+      message.info(tip);
     }
   } catch (e) {
     if (seq !== loadSeq) return;
     message.error(e instanceof Error ? e.message : "搜索失败");
     results.value = [];
-    hasMore.value = false;
+    loadError.value = true;
   } finally {
     if (seq === loadSeq) loading.value = false;
   }
 }
 
 /**
- * 滚动加载下一页。
- * - 满页：追加并 hasMore=true
- * - 半页（有数据但不足 pageSize）：追加并 hasMore=false（真到底）
- * - 空数组：多半是限流/抖动，不推进页码、保持 hasMore，冷却后可再滚触发
+ * 滚动/点击加载下一页。永不「没有更多」：
+ * - 有数据：追加并推进页码
+ * - 空/失败：不推进页码，标记 loadError，可点击或再滚重试
  */
 async function loadMore() {
-  if (loading.value || loadingMore.value || !hasMore.value) return;
-  if (Date.now() < loadMoreCooldownUntil) return;
+  if (loading.value || loadingMore.value) return;
   const name = keyword.value.trim();
-  if (!name) return;
+  if (!name || !hasSearched.value) return;
 
   const seq = loadSeq;
   const nextPage = page.value + 1;
   loadingMore.value = true;
+  loadError.value = false;
   try {
-    // 强制请求，避免空页被缓存；限流空数据时必须能重试
     const list = await fetchPage(name, nextPage, true);
     if (seq !== loadSeq) return;
 
     if (!list.length) {
-      // 不推进 page，保持可继续加载
-      loadMoreCooldownUntil = Date.now() + 2500;
+      // 限流/空页：不推进页码，保持可重试
+      loadError.value = true;
       return;
     }
 
     const before = results.value.length;
     results.value = mergeUnique(results.value, list);
     const added = results.value.length - before;
-
-    if (added === 0) {
-      // 全是重复：可能页码异常，推进一页后继续允许加载
-      page.value = nextPage;
-      loadMoreCooldownUntil = Date.now() + 1500;
-      hasMore.value = true;
-      return;
-    }
-
     page.value = nextPage;
-    // 只有不足一页才认为没有更多（真·末页）
-    hasMore.value = list.length >= pageSize;
+    // 全重复也推进页码，继续允许往后翻
+    if (added === 0) loadError.value = true;
   } catch (e) {
     if (seq !== loadSeq) return;
-    // 失败同样保持 hasMore，允许再滚重试
-    loadMoreCooldownUntil = Date.now() + 2500;
+    loadError.value = true;
     message.error(e instanceof Error ? e.message : "加载更多失败");
   } finally {
     if (seq === loadSeq) loadingMore.value = false;
@@ -252,7 +266,7 @@ function switchTab(next: SearchTab) {
   tab.value = next;
   results.value = [];
   page.value = 1;
-  hasMore.value = false;
+  loadError.value = false;
   hasSearched.value = false;
   // 有关键词则按新类型自动重搜
   if (keyword.value.trim()) {
@@ -332,13 +346,18 @@ function openAlbum(track: Track) {
   });
 }
 
-function openAlbumHit(hit: AlbumHit) {
-  if (!hit.name || hit.name === "未知专辑") {
-    message.warning("该专辑信息无效");
+function openCollectionHit(hit: CollectionHit) {
+  const isPlaylist = tab.value === "playlist";
+  const invalid =
+    !hit.name ||
+    hit.name === "未知专辑" ||
+    hit.name === "未知歌单";
+  if (invalid) {
+    message.warning(isPlaylist ? "该歌单信息无效" : "该专辑信息无效");
     return;
   }
   void router.push({
-    name: "album",
+    name: isPlaylist ? "playlist" : "album",
     query: {
       name: hit.name,
       source: hit.source || settings.source || "netease",
@@ -346,9 +365,9 @@ function openAlbumHit(hit: AlbumHit) {
   });
 }
 
-function onAlbumListScroll(e: Event) {
+function onCollectionListScroll(e: Event) {
   const el = e.target as HTMLElement;
-  if (!el || loadingMore.value || !hasMore.value) return;
+  if (!el || loadingMore.value) return;
   const remain = el.scrollHeight - el.scrollTop - el.clientHeight;
   if (remain <= 120) void loadMore();
 }
@@ -360,7 +379,7 @@ function onAlbumListScroll(e: Event) {
       <div>
         <h1 class="page-title">搜索</h1>
         <p class="page-subtitle">
-          歌曲与专辑分栏搜索；专辑名请切到「专辑」Tab
+          歌曲 / 专辑 / 歌单分栏搜索；专辑名、歌单名请切到对应 Tab
         </p>
       </div>
     </header>
@@ -428,6 +447,14 @@ function onAlbumListScroll(e: Event) {
       >
         专辑
       </button>
+      <button
+        type="button"
+        class="tab-btn"
+        :class="{ active: tab === 'playlist' }"
+        @click="switchTab('playlist')"
+      >
+        歌单
+      </button>
     </div>
 
     <div v-if="tab === 'song' && results.length" class="page-toolbar">
@@ -446,8 +473,11 @@ function onAlbumListScroll(e: Event) {
       <span class="meta-count">已加载 {{ results.length }} 首</span>
     </div>
 
-    <div v-else-if="tab === 'album' && albumHits.length" class="page-toolbar">
-      <span class="meta-count">已匹配 {{ albumHits.length }} 张专辑</span>
+    <div v-else-if="isCollectionTab && collectionHits.length" class="page-toolbar">
+      <span class="meta-count">
+        已匹配 {{ collectionHits.length }}
+        {{ tab === "playlist" ? " 个歌单" : " 张专辑" }}
+      </span>
     </div>
 
     <div class="page-body list-body">
@@ -460,8 +490,8 @@ function onAlbumListScroll(e: Event) {
           :active-key="activeTrackKey"
           album-link
           infinite
-          :has-more="hasMore"
           :loading-more="loadingMore"
+          :load-error="loadError"
           @play="onPlay"
           @add="onAdd"
           @download="openDownload"
@@ -469,18 +499,18 @@ function onAlbumListScroll(e: Event) {
           @load-more="loadMore"
         />
 
-        <!-- 专辑卡片列表 -->
+        <!-- 专辑 / 歌单卡片列表 -->
         <div
-          v-else-if="tab === 'album' && albumHits.length"
+          v-else-if="isCollectionTab && collectionHits.length"
           class="album-scroller"
-          @scroll.passive="onAlbumListScroll"
+          @scroll.passive="onCollectionListScroll"
         >
           <button
-            v-for="hit in albumHits"
+            v-for="hit in collectionHits"
             :key="hit.key"
             type="button"
             class="album-card"
-            @click="openAlbumHit(hit)"
+            @click="openCollectionHit(hit)"
           >
             <div class="album-cover">
               <img
@@ -492,7 +522,7 @@ function onAlbumListScroll(e: Event) {
               />
               <Icon
                 v-else
-                name="ri:album-line"
+                :name="tab === 'playlist' ? 'ri:play-list-2-line' : 'ri:album-line'"
                 :size="28"
                 color="var(--text-faint)"
               />
@@ -513,9 +543,25 @@ function onAlbumListScroll(e: Event) {
             />
           </button>
           <div class="list-footer">
-            <span v-if="loadingMore">加载中…</span>
-            <span v-else-if="hasMore">滚动加载更多（无数据时可再滚一次重试）</span>
-            <span v-else>没有更多了</span>
+            <template v-if="loadingMore">
+              <span>加载中…</span>
+            </template>
+            <button
+              v-else-if="loadError"
+              type="button"
+              class="load-more-btn"
+              @click="loadMore()"
+            >
+              加载失败，点击加载更多
+            </button>
+            <button
+              v-else
+              type="button"
+              class="load-more-btn muted"
+              @click="loadMore()"
+            >
+              滚动或点击加载更多
+            </button>
           </div>
         </div>
 
@@ -681,5 +727,23 @@ function onAlbumListScroll(e: Event) {
   font-size: 12px;
   color: var(--text-faint);
   user-select: none;
+}
+
+.load-more-btn {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.load-more-btn:hover {
+  background: var(--primary-soft, var(--surface-2));
+}
+
+.load-more-btn.muted {
+  color: var(--text-muted);
 }
 </style>

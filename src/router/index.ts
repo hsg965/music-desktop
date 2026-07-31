@@ -8,9 +8,10 @@ import SettingsWindow from "../views/SettingsWindow.vue";
 export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    // main / album 共用主窗口壳；专辑仅从搜索结果进入
+    // main / album / playlist 共用主窗口壳；专辑/歌单从搜索进入
     { path: "/", name: "main", component: MainView },
     { path: "/album", name: "album", component: MainView },
+    { path: "/playlist", name: "playlist", component: MainView },
     { path: "/mini", name: "mini", component: MiniPlayer },
     { path: "/lyric", name: "lyric", component: DesktopLyric },
     { path: "/theme", name: "theme", component: ThemeWindow },

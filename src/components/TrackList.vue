@@ -13,12 +13,12 @@ const props = withDefaults(
     virtual?: boolean;
     /** 专辑名可点击（仅搜索等入口开启） */
     albumLink?: boolean;
-    /** 启用滚动加载（展示底部状态文案） */
+    /** 启用滚动加载（永不结束，失败可点/再滚重试） */
     infinite?: boolean;
-    /** 是否还有更多 */
-    hasMore?: boolean;
     /** 正在加载更多 */
     loadingMore?: boolean;
+    /** 上一页加载失败或空数据（限流等） */
+    loadError?: boolean;
   }>(),
   {
     showIndex: true,
@@ -26,8 +26,8 @@ const props = withDefaults(
     virtual: true,
     albumLink: false,
     infinite: false,
-    hasMore: false,
     loadingMore: false,
+    loadError: false,
   },
 );
 
@@ -129,22 +129,21 @@ const showFooter = computed(
   () => props.infinite && list.value.length > 0,
 );
 
-const footerText = computed(() => {
-  if (props.loadingMore) return "加载中…";
-  if (props.hasMore) return "滚动加载更多（无数据时可再滚一次重试）";
-  return "没有更多了";
-});
-
 function artistText(t: Track) {
   return (t.artist || []).join(" / ") || "未知歌手";
 }
 
+function requestLoadMore() {
+  if (!props.infinite || props.loadingMore) return;
+  emit("loadMore");
+}
+
 function checkLoadMore() {
   const el = scroller.value;
-  if (!el || !props.infinite || !props.hasMore || props.loadingMore) return;
+  if (!el || !props.infinite || props.loadingMore) return;
   const remain = el.scrollHeight - el.scrollTop - el.clientHeight;
   if (remain <= LOAD_MORE_OFFSET) {
-    emit("loadMore");
+    requestLoadMore();
   }
 }
 
@@ -302,8 +301,26 @@ watch(
       <div v-if="useVirtual" class="pad" :style="{ height: padBottom + 'px' }" />
 
       <div v-if="showFooter" class="list-footer">
-        <span v-if="loadingMore" class="footer-spin" aria-hidden="true" />
-        <span>{{ footerText }}</span>
+        <template v-if="loadingMore">
+          <span class="footer-spin" aria-hidden="true" />
+          <span>加载中…</span>
+        </template>
+        <button
+          v-else-if="loadError"
+          type="button"
+          class="load-more-btn"
+          @click="requestLoadMore"
+        >
+          加载失败，点击加载更多
+        </button>
+        <button
+          v-else
+          type="button"
+          class="load-more-btn muted"
+          @click="requestLoadMore"
+        >
+          滚动或点击加载更多
+        </button>
       </div>
     </div>
   </div>
@@ -514,6 +531,24 @@ watch(
   font-size: 12px;
   color: var(--text-faint);
   user-select: none;
+}
+
+.load-more-btn {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.load-more-btn:hover {
+  background: var(--primary-soft, var(--surface-2));
+}
+
+.load-more-btn.muted {
+  color: var(--text-muted);
 }
 
 .footer-spin {
