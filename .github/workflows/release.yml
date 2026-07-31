@@ -6,6 +6,9 @@
 # 3. 在 Actions 中查看构建；完成后到 Releases 下载安装包
 #
 # 也可在 GitHub → Actions → Release → Run workflow 手动触发
+#
+# macOS：在 macos-latest（Apple Silicon）上交叉编译 universal 包
+# （aarch64 + x86_64 合一），不再依赖已稀缺的 macos-13 Intel runner。
 
 name: Release
 
@@ -37,15 +40,12 @@ jobs:
           - name: windows-x64
             platform: windows-latest
             args: ""
-            rust_target: ""
-          - name: macos-aarch64
+            rust_targets: ""
+          # Apple Silicon runner 上交叉编译 Intel + ARM → 单个 universal .dmg/.app
+          - name: macos-universal
             platform: macos-latest
-            args: "--target aarch64-apple-darwin"
-            rust_target: aarch64-apple-darwin
-          - name: macos-x64
-            platform: macos-13
-            args: "--target x86_64-apple-darwin"
-            rust_target: x86_64-apple-darwin
+            args: "--target universal-apple-darwin"
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
 
     runs-on: ${{ matrix.platform }}
 
@@ -66,10 +66,8 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-
-      - name: Add Rust target
-        if: matrix.rust_target != ''
-        run: rustup target add ${{ matrix.rust_target }}
+        with:
+          targets: ${{ matrix.rust_targets }}
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -95,8 +93,7 @@ jobs:
             | 系统 | 文件 |
             |------|------|
             | Windows x64 | `.exe`（NSIS 安装包）或 `.msi` |
-            | macOS Apple Silicon (M1/M2/M3…) | 文件名含 `aarch64` 的 `.dmg` |
-            | macOS Intel | 文件名含 `x64` 的 `.dmg` |
+            | macOS（Intel + Apple Silicon） | `universal` 通用包 `.dmg` / `.app.tar.gz` |
 
             > **macOS 未签名提示**：若提示「无法打开」→ 系统设置 → 隐私与安全性 → 仍要打开。
 

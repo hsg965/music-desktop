@@ -81,8 +81,7 @@ git push github v0.1.0
 5. 打开仓库 **Actions** 查看 `Release` 工作流
 6. 构建完成后到 **Releases** 下载：
    - Windows：`.exe` / `.msi`（以及 updater 用的 `.nsis.zip` / `.sig`）
-   - macOS ARM：`aarch64` 的 `.dmg` / `.app.tar.gz`
-   - macOS Intel：`x64` 对应产物
+   - macOS：`universal` 通用包（Intel + Apple Silicon）`.dmg` / `.app.tar.gz`
    - 清单：`latest.json`（客户端自动更新读取）
 
 也可在 **Actions → Release → Run workflow** 手动触发（可勾选草稿 Release）。
