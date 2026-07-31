@@ -26,6 +26,8 @@ function loadQueue(): Track[] {
 
 let audio: HTMLAudioElement | null = null;
 let broadcastTimer: number | null = null;
+/** 切歌会话 id：快速连点上下曲时丢弃过期的加载/播放结果 */
+let playSessionId = 0;
 
 function getAudio(): HTMLAudioElement {
   if (!audio) {
@@ -139,14 +141,22 @@ export const usePlayerStore = defineStore("player", () => {
     }, 800);
   }
 
-  async function resolveTrackMedia(track: Track): Promise<boolean> {
-    loading.value = true;
+  /**
+   * 解析可播放地址。封面/歌词在后台并行补齐，不阻塞起播。
+   * @returns playUrl 成功时返回地址，失败返回 null
+   */
+  async function resolvePlayUrl(
+    track: Track,
+    sessionId: number,
+  ): Promise<string | null> {
     error.value = "";
     try {
       const br = settings.bitrate;
 
       // 1) 优先使用安装目录 cache_dir 中的本地音频
       const cachedPath = await findCachedAudioPath(track.source, track.id, br);
+      if (sessionId !== playSessionId) return null;
+
       let playUrl: string | null = null;
       let remoteForCache: string | null = null;
 
@@ -158,9 +168,10 @@ export const usePlayerStore = defineStore("player", () => {
         const urlRes = existingRemote
           ? { url: existingRemote }
           : await fetchPlayUrl(track.id, track.source, br);
+        if (sessionId !== playSessionId) return null;
         if (!urlRes?.url) {
           error.value = "无法获取播放地址（可能无版权或音源不可用）";
-          return false;
+          return null;
         }
         // 协议相对 //cdn... → https://cdn...
         const remote = urlRes.url.startsWith("//")
@@ -170,58 +181,100 @@ export const usePlayerStore = defineStore("player", () => {
         remoteForCache = remote;
       }
 
-      // 封面 / 歌词并行（与音频缓存无关）
-      const [pic, lyric] = await Promise.all([
-        track.picUrl
-          ? Promise.resolve(track.picUrl)
-          : fetchPicUrl(track.pic_id, track.source, 500),
-        fetchLyric(track.lyric_id, track.source),
-      ]);
-
       if (!playUrl) {
         error.value = "无法获取播放地址（可能无版权或音源不可用）";
-        return false;
+        return null;
       }
 
       track.url = playUrl;
-      track.picUrl = pic || track.picUrl;
-      lyricText.value = lyric.lyric || "";
-      tlyricText.value = lyric.tlyric || "";
 
       // 3) 首次在线播放：后台写入 cache_dir，下次直接本地播
       if (remoteForCache) {
         scheduleCacheRemote(track, br, remoteForCache);
       }
 
-      return true;
+      // 封面 / 歌词后台补齐，不挡住起播
+      void fillTrackMeta(track, sessionId);
+
+      return playUrl;
     } catch (e) {
+      if (sessionId !== playSessionId) return null;
       error.value = e instanceof Error ? e.message : "加载失败";
-      return false;
-    } finally {
-      loading.value = false;
+      return null;
     }
   }
 
+  /** 封面与歌词异步填充；若已切到别的歌则丢弃结果 */
+  async function fillTrackMeta(track: Track, sessionId: number) {
+    try {
+      const [pic, lyric] = await Promise.all([
+        track.picUrl
+          ? Promise.resolve(track.picUrl)
+          : fetchPicUrl(track.pic_id, track.source, 500),
+        fetchLyric(track.lyric_id, track.source),
+      ]);
+      if (sessionId !== playSessionId) return;
+      if (pic) track.picUrl = pic;
+      lyricText.value = lyric.lyric || "";
+      tlyricText.value = lyric.tlyric || "";
+      broadcastState();
+    } catch {
+      // 元数据失败不影响播放
+    }
+  }
+
+  /**
+   * 先切换当前曲目（UI 立刻更新），再加载音源并播放。
+   * 快速连点时以最新一次为准。
+   */
   async function playAt(index: number) {
     if (index < 0 || index >= queue.value.length) return;
-    currentIndex.value = index;
+
+    const sessionId = ++playSessionId;
     const track = queue.value[index];
-    const ok = await resolveTrackMedia(track);
-    if (!ok) {
+
+    // —— 1) 先切换：立刻更新队列指针与 UI 状态 ——
+    currentIndex.value = index;
+    currentTime.value = 0;
+    duration.value = 0;
+    lyricText.value = "";
+    tlyricText.value = "";
+    error.value = "";
+    loading.value = true;
+    playing.value = false;
+
+    const el = getAudio();
+    el.pause();
+    el.removeAttribute("src");
+    el.load();
+    broadcastState();
+
+    // —— 2) 再加载音源 ——
+    const playUrl = await resolvePlayUrl(track, sessionId);
+    if (sessionId !== playSessionId) return;
+
+    if (!playUrl) {
+      loading.value = false;
       playing.value = false;
       broadcastState();
       return;
     }
 
-    const el = getAudio();
-    el.src = track.url!;
+    // —— 3) 起播 ——
+    el.src = playUrl;
     el.volume = settings.volume;
     try {
       await el.play();
+      if (sessionId !== playSessionId) return;
       playing.value = true;
     } catch {
+      if (sessionId !== playSessionId) return;
       error.value = "自动播放被拦截，请点击播放";
       playing.value = false;
+    } finally {
+      if (sessionId === playSessionId) {
+        loading.value = false;
+      }
     }
     broadcastState();
   }
