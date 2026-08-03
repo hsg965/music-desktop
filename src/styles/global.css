@@ -189,6 +189,80 @@ html[data-mode="dark"]
   --n-color-hover: rgba(234, 179, 8, 0.22) !important;
 }
 
+/*
+ * 表单控件：半透明雾面，跟皮肤一体（覆盖 naive 默认白底）
+ */
+.n-input:not(.n-input--disabled) {
+  --n-color: var(--surface-2) !important;
+  --n-color-focus: color-mix(in srgb, var(--surface-2) 70%, #fff) !important;
+  --n-text-color: var(--text) !important;
+  --n-placeholder-color: var(--text-faint) !important;
+  --n-caret-color: var(--primary) !important;
+  --n-border: 1px solid var(--border) !important;
+  --n-border-hover: 1px solid var(--border-strong) !important;
+  --n-border-focus: 1px solid var(--primary) !important;
+  --n-box-shadow-focus: 0 0 0 2px var(--primary-soft) !important;
+  background-color: transparent !important;
+}
+
+html[data-mode="dark"] .n-input:not(.n-input--disabled) {
+  --n-color: rgba(255, 255, 255, 0.08) !important;
+  --n-color-focus: rgba(255, 255, 255, 0.12) !important;
+}
+
+.n-input .n-input__input-el,
+.n-input .n-input__textarea-el {
+  color: var(--text) !important;
+}
+
+.n-base-selection:not(.n-base-selection--disabled) {
+  --n-color: var(--surface-2) !important;
+  --n-color-active: color-mix(in srgb, var(--surface-2) 70%, #fff) !important;
+  --n-text-color: var(--text) !important;
+  --n-placeholder-color: var(--text-faint) !important;
+  --n-border: 1px solid var(--border) !important;
+  --n-border-hover: 1px solid var(--border-strong) !important;
+  --n-border-active: 1px solid var(--primary) !important;
+  --n-border-focus: 1px solid var(--primary) !important;
+  --n-box-shadow-hover: none !important;
+  --n-box-shadow-active: 0 0 0 2px var(--primary-soft) !important;
+  --n-box-shadow-focus: 0 0 0 2px var(--primary-soft) !important;
+  --n-arrow-color: var(--text-muted) !important;
+  --n-caret-color: var(--primary) !important;
+}
+
+html[data-mode="dark"] .n-base-selection:not(.n-base-selection--disabled) {
+  --n-color: rgba(255, 255, 255, 0.08) !important;
+  --n-color-active: rgba(255, 255, 255, 0.12) !important;
+}
+
+.n-base-selection .n-base-selection-label,
+.n-base-selection .n-base-selection-input__content {
+  color: var(--text) !important;
+}
+
+.n-base-select-menu,
+.n-popover:not(.n-popover--raw),
+.n-dropdown-menu {
+  --n-color: color-mix(in srgb, var(--bar-bg) 88%, var(--bg)) !important;
+  --n-option-text-color: var(--text) !important;
+  --n-option-text-color-active: var(--primary) !important;
+  --n-option-color-pending: var(--surface-2) !important;
+  --n-option-color-active: var(--primary-soft) !important;
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+}
+
+html[data-mode="dark"] .n-base-select-menu,
+html[data-mode="dark"] .n-dropdown-menu {
+  --n-color: color-mix(in srgb, var(--bar-bg) 92%, #000) !important;
+}
+
+/* ColorPicker 触发器 */
+.n-color-picker-trigger {
+  border-color: var(--border) !important;
+}
+
 /* ----- 3) 默认按钮：正文色 + 可见底/边框 ----- */
 .n-button.n-button--default-type:not(.n-button--disabled):not(
     .n-button--secondary

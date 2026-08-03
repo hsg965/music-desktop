@@ -34,6 +34,25 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
   const base = skin.value.naiveOverrides;
   const isLight = skin.value.mode === "light";
 
+  /** 表单控件底：半透明雾面，避免纯白块 */
+  const ctrl = isLight
+    ? t["surface-2"] || "rgba(255,255,255,0.4)"
+    : "rgba(255,255,255,0.08)";
+  const ctrlFocus = isLight
+    ? "rgba(255,255,255,0.55)"
+    : "rgba(255,255,255,0.12)";
+  const ctrlBorder = `1px solid ${t.border}`;
+  const ctrlBorderHover = `1px solid ${t["border-strong"]}`;
+  const ctrlBorderFocus = `1px solid ${t.primary}`;
+  /** 下拉/弹层：略实一点但仍跟皮肤，不用死白 */
+  const pop = isLight
+    ? t["bar-bg"] !== "transparent"
+      ? t["bar-bg"]
+      : "rgba(255,252,240,0.92)"
+    : t["bar-bg"] || "rgba(28,28,32,0.92)";
+  const btnFace = ctrl;
+  const btnFaceHover = ctrlFocus;
+
   return {
     common: {
       ...base.common,
@@ -45,10 +64,17 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
       primaryColorPressed: t["primary-pressed"],
       primaryColorSuppl: t.primary,
       textColorBase: t.text,
+      cardColor: ctrl,
+      modalColor: pop,
+      popoverColor: pop,
+      borderColor: t.border,
+      borderRadius: t["radius-md"],
+      inputColor: ctrl,
+      inputColorDisabled: t.surface,
+      hoverColor: t["surface-2"],
     },
     Button: {
       borderRadiusMedium: t["radius-md"],
-      // 默认：深色字 + 可见底（亮色下白底）
       textColor: t.text,
       textColorHover: t.text,
       textColorPressed: t.text,
@@ -58,33 +84,73 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
       textColorTextHover: t.primary,
       textColorGhost: t.primary,
       textColorGhostHover: t["primary-hover"],
-      // 实心主按钮：白字 + 主色底（默认态就必须有底，不能靠 hover）
       textColorPrimary: "#ffffff",
       textColorHoverPrimary: "#ffffff",
       textColorPressedPrimary: "#ffffff",
       textColorFocusPrimary: "#ffffff",
       textColorDisabledPrimary: "rgba(255,255,255,0.55)",
-      // secondary 主色按钮用主色当字色（naive 会取 colorPrimary 作 secondary 字色）
-      // 所以 color 系列给实心底，opacity 由 naive secondary 分支处理
-      color: isLight ? "#ffffff" : t["surface-2"],
-      colorHover: isLight ? "#f3f4f6" : t["surface-2"],
-      colorPressed: isLight ? "#e8e9ec" : t.surface,
-      colorFocus: isLight ? "#f3f4f6" : t["surface-2"],
-      colorDisabled: isLight ? "#ffffff" : t.surface,
+      color: btnFace,
+      colorHover: btnFaceHover,
+      colorPressed: t.surface,
+      colorFocus: btnFaceHover,
+      colorDisabled: t.surface,
       colorPrimary: t.primary,
       colorHoverPrimary: t["primary-hover"],
       colorPressedPrimary: t["primary-pressed"],
       colorFocusPrimary: t["primary-hover"],
       colorDisabledPrimary: t.primary,
-      // secondary 浅底不透明度（亮色略高更易辨认）
       colorOpacitySecondary: isLight ? "0.14" : "0.18",
       colorOpacitySecondaryHover: isLight ? "0.2" : "0.26",
       colorOpacitySecondaryPressed: isLight ? "0.24" : "0.32",
-      border: `1px solid ${t["border-strong"]}`,
-      borderHover: `1px solid ${t["border-strong"]}`,
+      border: ctrlBorderHover,
+      borderHover: ctrlBorderHover,
       borderPrimary: `1px solid ${t.primary}`,
       borderHoverPrimary: `1px solid ${t["primary-hover"]}`,
       borderFocusPrimary: `1px solid ${t["primary-hover"]}`,
+    },
+    Input: {
+      borderRadius: t["radius-md"],
+      color: ctrl,
+      colorFocus: ctrlFocus,
+      colorDisabled: t.surface,
+      textColor: t.text,
+      textColorDisabled: t["text-faint"],
+      placeholderColor: t["text-faint"],
+      caretColor: t.primary,
+      border: ctrlBorder,
+      borderHover: ctrlBorderHover,
+      borderFocus: ctrlBorderFocus,
+      borderDisabled: ctrlBorder,
+      boxShadowFocus: `0 0 0 2px ${t["primary-soft"]}`,
+    },
+    InternalSelection: {
+      borderRadius: t["radius-md"],
+      color: ctrl,
+      colorActive: ctrlFocus,
+      colorDisabled: t.surface,
+      textColor: t.text,
+      textColorDisabled: t["text-faint"],
+      placeholderColor: t["text-faint"],
+      border: ctrlBorder,
+      borderHover: ctrlBorderHover,
+      borderActive: ctrlBorderFocus,
+      borderFocus: ctrlBorderFocus,
+      borderDisabled: ctrlBorder,
+      caretColor: t.primary,
+      arrowColor: t["text-muted"],
+      boxShadowHover: "none",
+      boxShadowActive: `0 0 0 2px ${t["primary-soft"]}`,
+      boxShadowFocus: `0 0 0 2px ${t["primary-soft"]}`,
+    },
+    InternalSelectMenu: {
+      borderRadius: t["radius-md"],
+      color: pop,
+      optionTextColor: t.text,
+      optionTextColorActive: t.primary,
+      optionTextColorPressed: t.primary,
+      optionColorPending: t["surface-2"],
+      optionColorActive: t["primary-soft"],
+      optionColorActivePending: t["primary-soft"],
     },
     Slider: {
       fillColor: t.primary,
@@ -92,25 +158,73 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
       railColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)",
       railColorHover: isLight ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.18)",
       handleSize: "12px",
+      handleColor: "#ffffff",
+    },
+    Switch: {
+      railColor: isLight ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.16)",
+      railColorActive: t.primary,
+      buttonColor: "#ffffff",
+    },
+    Radio: {
+      textColor: t.text,
+      dotColorActive: t.primary,
+      boxShadowActive: `inset 0 0 0 1px ${t.primary}`,
+      buttonColorActive: t["primary-soft"],
+      buttonTextColorActive: t.primary,
+      buttonBorderColor: t.border,
+      buttonBorderColorActive: t.primary,
+      buttonBoxShadowFocus: `0 0 0 2px ${t["primary-soft"]}`,
+    },
+    ColorPicker: {
+      borderRadius: t["radius-md"],
+      border: ctrlBorder,
+      borderHover: ctrlBorderHover,
+      borderActive: ctrlBorderFocus,
+      boxShadow: "none",
+      boxShadowFocus: `0 0 0 2px ${t["primary-soft"]}`,
     },
     Card: {
-      color: t["surface-2"] || t["bar-bg"],
-      colorModal: isLight ? "#ffffff" : t["bar-bg"],
+      color: ctrl,
+      colorModal: pop,
       colorEmbedded: t.surface,
       textColor: t.text,
       titleTextColor: t.text,
       borderColor: t.border,
       closeIconColor: t["text-muted"],
       closeIconColorHover: t.text,
+      borderRadius: t["radius-md"],
     },
     Modal: {
-      color: isLight ? "#ffffff" : t["bar-bg"],
+      color: pop,
       textColor: t.text,
+      borderRadius: t["radius-lg"],
     },
-    Radio: {
+    Popover: {
+      color: pop,
       textColor: t.text,
-      dotColorActive: t.primary,
-      boxShadowActive: `inset 0 0 0 1px ${t.primary}`,
+      borderRadius: t["radius-md"],
+    },
+    Dropdown: {
+      color: pop,
+      optionTextColor: t.text,
+      optionTextColorHover: t.text,
+      optionTextColorActive: t.primary,
+      optionColorHover: t["surface-2"],
+      optionColorActive: t["primary-soft"],
+      borderRadius: t["radius-md"],
+    },
+    Tag: {
+      borderRadius: t["radius-sm"],
+      color: t["surface-2"],
+      textColor: t.text,
+      border: `1px solid ${t.border}`,
+    },
+    Spin: {
+      color: t.primary,
+    },
+    Empty: {
+      textColor: t["text-muted"],
+      iconColor: t["text-faint"],
     },
   };
 });
