@@ -342,7 +342,7 @@ watch(
   padding-bottom: 8px;
 }
 
-/* 表头：轻标签行，不铺实色条，避免突兀切割 */
+/* 表头：半透明雾面底，遮住滚动重叠，又不显死白条 */
 .track-head {
   position: sticky;
   top: 0;
@@ -351,12 +351,12 @@ watch(
   grid-template-columns: 40px minmax(0, 1.4fr) minmax(0, 1fr) 108px;
   gap: 8px;
   align-items: center;
-  padding: 4px 10px 6px;
+  padding: 6px 10px 8px;
   margin-bottom: 2px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 28%, transparent);
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 35%, transparent);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: blur(14px) saturate(var(--glass-saturate, 1.3));
+  -webkit-backdrop-filter: blur(14px) saturate(var(--glass-saturate, 1.3));
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.01em;

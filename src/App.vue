@@ -36,20 +36,18 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
 
   /** 表单控件底：半透明雾面，避免纯白块 */
   const ctrl = isLight
-    ? t["surface-2"] || "rgba(255,255,255,0.4)"
+    ? t["surface-2"] || "rgba(255,255,255,0.35)"
     : "rgba(255,255,255,0.08)";
   const ctrlFocus = isLight
-    ? "rgba(255,255,255,0.55)"
+    ? "rgba(255,255,255,0.28)"
     : "rgba(255,255,255,0.12)";
   const ctrlBorder = `1px solid ${t.border}`;
   const ctrlBorderHover = `1px solid ${t["border-strong"]}`;
   const ctrlBorderFocus = `1px solid ${t.primary}`;
-  /** 下拉/弹层：略实一点但仍跟皮肤，不用死白 */
+  /** 下拉/弹层：跟壁纸同系，禁止 #fff */
   const pop = isLight
-    ? t["bar-bg"] !== "transparent"
-      ? t["bar-bg"]
-      : "rgba(255,252,240,0.92)"
-    : t["bar-bg"] || "rgba(28,28,32,0.92)";
+    ? "rgba(255, 250, 235, 0.55)"
+    : "rgba(18, 18, 22, 0.72)";
   const btnFace = ctrl;
   const btnFaceHover = ctrlFocus;
 
@@ -64,9 +62,11 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
       primaryColorPressed: t["primary-pressed"],
       primaryColorSuppl: t.primary,
       textColorBase: t.text,
-      cardColor: ctrl,
+      cardColor: pop,
       modalColor: pop,
       popoverColor: pop,
+      tableColor: "transparent",
+      tableHeaderColor: "transparent",
       borderColor: t.border,
       borderRadius: t["radius-md"],
       inputColor: ctrl,

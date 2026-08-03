@@ -241,26 +241,54 @@ html[data-mode="dark"] .n-base-selection:not(.n-base-selection--disabled) {
   color: var(--text) !important;
 }
 
+/* 下拉/弹出层：强制雾面底，去掉 naive 默认大白块 */
 .n-base-select-menu,
 .n-popover:not(.n-popover--raw),
-.n-dropdown-menu {
-  --n-color: color-mix(in srgb, var(--bar-bg) 88%, var(--bg)) !important;
+.n-dropdown-menu,
+.n-color-picker-panel {
+  --n-color: color-mix(in srgb, var(--bg) 72%, transparent) !important;
   --n-option-text-color: var(--text) !important;
   --n-option-text-color-active: var(--primary) !important;
   --n-option-color-pending: var(--surface-2) !important;
   --n-option-color-active: var(--primary-soft) !important;
-  backdrop-filter: blur(var(--panel-blur));
-  -webkit-backdrop-filter: blur(var(--panel-blur));
+  --n-divider-color: var(--border) !important;
+  color: var(--text) !important;
+  background: color-mix(in srgb, var(--bg) 72%, transparent) !important;
+  background-color: color-mix(in srgb, var(--bg) 72%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent) !important;
+  box-shadow: var(--shadow) !important;
+  backdrop-filter: blur(var(--panel-blur)) saturate(var(--glass-saturate, 1.35));
+  -webkit-backdrop-filter: blur(var(--panel-blur))
+    saturate(var(--glass-saturate, 1.35));
 }
 
 html[data-mode="dark"] .n-base-select-menu,
-html[data-mode="dark"] .n-dropdown-menu {
-  --n-color: color-mix(in srgb, var(--bar-bg) 92%, #000) !important;
+html[data-mode="dark"] .n-dropdown-menu,
+html[data-mode="dark"] .n-popover:not(.n-popover--raw),
+html[data-mode="dark"] .n-color-picker-panel {
+  --n-color: color-mix(in srgb, var(--bg) 78%, transparent) !important;
+  background: color-mix(in srgb, var(--bg) 78%, transparent) !important;
+  background-color: color-mix(in srgb, var(--bg) 78%, transparent) !important;
+}
+
+.n-base-select-menu .n-base-select-option,
+.n-dropdown-option {
+  color: var(--text) !important;
+}
+
+.n-base-select-menu .n-base-select-option--pending,
+.n-base-select-menu .n-base-select-option--selected {
+  background-color: var(--surface-2) !important;
+}
+
+.n-base-select-menu .n-base-select-option--selected {
+  color: var(--primary) !important;
 }
 
 /* ColorPicker 触发器 */
 .n-color-picker-trigger {
   border-color: var(--border) !important;
+  background: var(--surface-2) !important;
 }
 
 /* ----- 3) 默认按钮：正文色 + 可见底/边框 ----- */
@@ -284,32 +312,21 @@ html[data-mode="dark"] .n-dropdown-menu {
   --n-border-focus: 1px solid var(--primary) !important;
 }
 
-html[data-mode="light"]
-  .n-button.n-button--default-type:not(.n-button--disabled):not(
-    .n-button--secondary
-  ):not(.n-button--tertiary):not(.n-button--quaternary):not(
-    .n-button--ghost
-  ):not(.n-button--text-type) {
-  background-color: #ffffff !important;
-  --n-color: #ffffff !important;
-  --n-color-hover: #f3f4f6 !important;
-  --n-color-focus: #f3f4f6 !important;
-}
-
-html[data-mode="light"]
-  .n-button.n-button--default-type:not(.n-button--disabled):not(
+/* 亮色默认按钮也用雾面，不再强制纯白 */
+.n-button.n-button--default-type:not(.n-button--disabled):not(
     .n-button--secondary
   ):not(.n-button--tertiary):not(.n-button--quaternary):not(
     .n-button--ghost
   ):not(.n-button--text-type):hover,
-html[data-mode="light"]
-  .n-button.n-button--default-type:not(.n-button--disabled):not(
+.n-button.n-button--default-type:not(.n-button--disabled):not(
     .n-button--secondary
   ):not(.n-button--tertiary):not(.n-button--quaternary):not(
     .n-button--ghost
   ):not(.n-button--text-type):focus {
-  background-color: #f3f4f6 !important;
+  background-color: color-mix(in srgb, var(--surface-2) 80%, transparent) !important;
   color: var(--text) !important;
+  --n-color-hover: color-mix(in srgb, var(--surface-2) 80%, transparent) !important;
+  --n-color-focus: color-mix(in srgb, var(--surface-2) 80%, transparent) !important;
 }
 
 /* ----- 4) 图标 / quaternary：静音色，悬停才浅底 ----- */
@@ -377,30 +394,41 @@ html[data-mode="light"]
   color: var(--text-muted) !important;
 }
 
-/* 输入：实心底，非玻璃 */
+/* 输入/选择：半透明雾面（覆盖旧「亮色强制白底」） */
 .n-input,
 .n-base-selection {
-  --n-color: var(--surface) !important;
-  --n-color-focus: var(--surface-2) !important;
+  --n-color: var(--surface-2) !important;
+  --n-color-focus: color-mix(in srgb, var(--surface-2) 65%, transparent) !important;
+  --n-color-active: color-mix(in srgb, var(--surface-2) 65%, transparent) !important;
   --n-border: 1px solid var(--border) !important;
   --n-border-hover: 1px solid var(--border-strong) !important;
   --n-border-focus: 1px solid var(--primary) !important;
+  --n-border-active: 1px solid var(--primary) !important;
   --n-text-color: var(--text) !important;
   --n-placeholder-color: var(--text-faint) !important;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background-color: transparent !important;
 }
 
-html[data-mode="light"] .n-input,
-html[data-mode="light"] .n-base-selection {
-  --n-color: #ffffff !important;
-  --n-color-focus: #ffffff !important;
+html[data-mode="dark"] .n-input,
+html[data-mode="dark"] .n-base-selection {
+  --n-color: rgba(255, 255, 255, 0.08) !important;
+  --n-color-focus: rgba(255, 255, 255, 0.12) !important;
+  --n-color-active: rgba(255, 255, 255, 0.12) !important;
 }
 
 .n-tag {
   --n-color: var(--surface-2) !important;
   --n-text-color: var(--text) !important;
   --n-border: 1px solid var(--border) !important;
+}
+
+/* 弹窗卡片也不用死白 */
+.n-card,
+.n-modal .n-card {
+  --n-color: color-mix(in srgb, var(--bg) 82%, transparent) !important;
+  background-color: color-mix(in srgb, var(--bg) 82%, transparent) !important;
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
 }
 
 /* 滑块更贴桌面播放器 */
