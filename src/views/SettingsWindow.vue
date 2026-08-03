@@ -185,7 +185,7 @@ onUnmounted(() => {
       </header>
 
       <div class="body">
-        <nav class="side skin-frost">
+        <nav class="side">
           <button
             v-for="s in sections"
             :key="s.id"
@@ -530,39 +530,48 @@ onUnmounted(() => {
   display: flex;
 }
 
-/* 左侧分类：磨砂侧栏，透出壁纸 */
+/* 左侧分类：QQ 风透明列 + 圆角毛玻璃项 */
 .side {
-  width: 132px;
+  width: 140px;
   flex-shrink: 0;
-  padding: 10px 0;
-  border-right: 1px solid var(--border);
+  padding: 10px 10px;
+  border-right: none;
   overflow-y: auto;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .side-item {
   display: block;
   width: 100%;
-  height: 34px;
-  padding: 0 16px;
-  border: none;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
   background: transparent;
   color: var(--text-muted);
   font-size: 13px;
   text-align: left;
   cursor: pointer;
-  border-left: 2px solid transparent;
 }
 
 .side-item:hover {
   color: var(--text);
-  background: var(--surface);
+  background: var(--surface-2);
+  backdrop-filter: blur(calc(var(--panel-blur) * 0.6));
+  -webkit-backdrop-filter: blur(calc(var(--panel-blur) * 0.6));
 }
 
 .side-item.active {
-  color: var(--primary);
+  color: var(--text);
   font-weight: 600;
-  background: var(--primary-soft);
-  border-left-color: var(--primary);
+  background: var(--sider-bg);
+  border-color: color-mix(in srgb, var(--border) 50%, transparent);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--bg) 8%, transparent);
 }
 
 /* 右侧内容：透明融入壁纸 */

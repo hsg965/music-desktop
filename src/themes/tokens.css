@@ -75,7 +75,7 @@
   z-index: 1;
 }
 
-/* 标题栏：与壁纸一体，无分割线、无实色条 */
+/* 标题栏：整窗一体，无条带感（参考 QQ 音乐） */
 .title-bar {
   height: var(--titlebar-height);
   min-height: var(--titlebar-height);
@@ -95,30 +95,41 @@
   background: transparent;
 }
 
-/* 左侧导航：毛玻璃（透出壁纸） */
+/*
+ * 左侧导航（QQ 风格）：
+ * 列本身透明融进壁纸，不做整列实色/硬分割；
+ * 毛玻璃用在品牌块与导航项圆角胶囊上。
+ */
 .app-nav {
   width: var(--sider-width);
   min-width: var(--sider-width);
-  background: var(--sider-bg);
-  border-right: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  background: transparent;
+  border-right: none;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
-  padding: 12px 10px 16px;
-  gap: 4px;
+  padding: 8px 12px 14px;
+  gap: 3px;
   user-select: none;
-  backdrop-filter: blur(var(--panel-blur)) saturate(var(--glass-saturate, 1.35));
-  -webkit-backdrop-filter: blur(var(--panel-blur))
-    saturate(var(--glass-saturate, 1.35));
-  /* 右侧柔边，减弱「切分条」感 */
-  box-shadow: inset -1px 0 0 color-mix(in srgb, var(--border) 40%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .app-nav-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 10px 14px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
   color: var(--text);
+  border-radius: 14px;
+  /* 品牌区软毛玻璃卡片 */
+  background: var(--sider-bg);
+  backdrop-filter: blur(var(--panel-blur)) saturate(var(--glass-saturate, 1.4));
+  -webkit-backdrop-filter: blur(var(--panel-blur))
+    saturate(var(--glass-saturate, 1.4));
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--shadow) 25%, transparent);
 }
 
 .app-nav-brand-title {
@@ -128,7 +139,7 @@
 }
 
 .app-nav-section {
-  margin: 10px 10px 6px;
+  margin: 12px 10px 4px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -143,8 +154,8 @@
   width: 100%;
   height: 40px;
   padding: 0 12px;
-  border: none;
-  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  border-radius: 12px;
   background: transparent;
   color: var(--text-muted);
   font-size: 13px;
@@ -152,19 +163,33 @@
   cursor: pointer;
   text-align: left;
   transition:
-    background 0.12s ease,
-    color 0.12s ease;
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    backdrop-filter 0.15s ease;
 }
 
+/* 悬停/选中：QQ 式圆角毛玻璃胶囊 */
 .app-nav-item:hover {
   background: var(--surface-2);
   color: var(--text);
+  border-color: color-mix(in srgb, var(--border) 35%, transparent);
+  backdrop-filter: blur(calc(var(--panel-blur) * 0.65))
+    saturate(var(--glass-saturate, 1.4));
+  -webkit-backdrop-filter: blur(calc(var(--panel-blur) * 0.65))
+    saturate(var(--glass-saturate, 1.4));
 }
 
 .app-nav-item.active {
-  background: var(--surface-2);
+  background: var(--sider-bg);
   color: var(--text);
   font-weight: 600;
+  border-color: color-mix(in srgb, var(--border) 55%, transparent);
+  backdrop-filter: blur(var(--panel-blur)) saturate(var(--glass-saturate, 1.4));
+  -webkit-backdrop-filter: blur(var(--panel-blur))
+    saturate(var(--glass-saturate, 1.4));
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--bg) 10%, transparent);
 }
 
 .app-nav-item.active .nav-icon {
@@ -327,18 +352,20 @@
   background: transparent !important;
 }
 
-/* 播放条：轻磨砂融入底，弱分割线 */
+/* 播放条：与壁纸一体，仅轻雾化，无硬顶线 */
 .player-bar {
   height: var(--player-height);
   min-height: var(--player-height);
   flex-shrink: 0;
   background: var(--bar-bg);
-  border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  border-top: none;
   color: var(--text);
-  backdrop-filter: blur(calc(var(--panel-blur) * 0.75))
+  backdrop-filter: blur(calc(var(--panel-blur) * 0.55))
     saturate(var(--glass-saturate, 1.35));
-  -webkit-backdrop-filter: blur(calc(var(--panel-blur) * 0.75))
+  -webkit-backdrop-filter: blur(calc(var(--panel-blur) * 0.55))
     saturate(var(--glass-saturate, 1.35));
+  /* 顶缘极轻渐隐，避免「一条播放器」割裂 */
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--border) 35%, transparent);
 }
 
 .player-cover {
