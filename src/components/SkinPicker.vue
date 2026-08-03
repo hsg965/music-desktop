@@ -1,9 +1,22 @@
 <script setup lang="ts">
 import { SKINS } from "../themes/registry";
-import type { SkinId } from "../themes/types";
+import type { SkinDefinition, SkinId } from "../themes/types";
 import { useSettingsStore } from "../stores/settings";
 
 const settings = useSettingsStore();
+
+function previewStyle(skin: SkinDefinition): Record<string, string> {
+  if (skin.wallpaper.type === "image") {
+    return {
+      backgroundImage: `url("${skin.wallpaper.src}")`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    };
+  }
+  return {
+    background: skin.wallpaper.value,
+  };
+}
 
 function select(id: SkinId) {
   settings.setSkin(id);
@@ -20,12 +33,7 @@ function select(id: SkinId) {
       :class="{ active: settings.skinId === skin.id }"
       @click="select(skin.id)"
     >
-      <div
-        class="skin-preview"
-        :style="{
-          background: `linear-gradient(135deg, ${skin.preview[0]} 0%, ${skin.preview[1]} 55%, ${skin.preview[2]} 100%)`,
-        }"
-      >
+      <div class="skin-preview" :style="previewStyle(skin)">
         <span class="skin-chip" :style="{ background: skin.preview[1] }" />
         <span class="skin-chip" :style="{ background: skin.preview[2] }" />
         <span

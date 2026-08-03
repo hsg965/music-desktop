@@ -215,7 +215,7 @@ onUnmounted(() => {
                     </NButton>
                   </div>
                 </div>
-                <p class="hint">皮肤只改变配色，不影响窗口布局。</p>
+                <p class="hint">更换整窗皮肤：壁纸、磨砂侧栏与播放条一并切换，布局不变。</p>
               </div>
             </template>
 

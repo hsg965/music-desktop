@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { NButton, NRadioButton, NRadioGroup } from "naive-ui";
 import { SKINS } from "../themes/registry";
-import type { SkinId, SkinMode } from "../themes/types";
+import type { SkinDefinition, SkinId, SkinMode } from "../themes/types";
 import { useSettingsStore } from "../stores/settings";
 import Icon from "../components/Icon.vue";
 import { applySkin } from "../themes/apply";
@@ -17,6 +17,19 @@ const list = computed(() => {
 
 const lightCount = computed(() => SKINS.filter((s) => s.mode === "light").length);
 const darkCount = computed(() => SKINS.filter((s) => s.mode === "dark").length);
+
+function previewStyle(skin: SkinDefinition): Record<string, string> {
+  if (skin.wallpaper.type === "image") {
+    return {
+      backgroundImage: `url("${skin.wallpaper.src}")`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    };
+  }
+  return {
+    background: skin.wallpaper.value,
+  };
+}
 
 function select(id: SkinId) {
   settings.setSkin(id);
@@ -73,12 +86,7 @@ onMounted(() => {
           :class="{ active: settings.skinId === skin.id }"
           @click="select(skin.id)"
         >
-          <div
-            class="skin-preview"
-            :style="{
-              background: `linear-gradient(135deg, ${skin.preview[0]} 0%, ${skin.preview[1]} 55%, ${skin.preview[2]} 100%)`,
-            }"
-          >
+          <div class="skin-preview" :style="previewStyle(skin)">
             <span class="skin-chip" :style="{ background: skin.preview[1] }" />
             <span class="skin-chip" :style="{ background: skin.preview[2] }" />
             <span
