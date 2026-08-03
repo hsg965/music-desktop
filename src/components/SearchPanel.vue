@@ -298,11 +298,9 @@ function onInputBlur() {
 }
 
 async function onPlay(track: Track) {
-  const list = results.value;
-  const idx = list.findIndex(
-    (t) => `${t.source}-${t.id}` === `${track.source}-${track.id}`,
-  );
-  await player.playAll(list, idx >= 0 ? idx : 0);
+  // 单曲播放：只播当前歌曲，不自动把整个结果列表加入队列；
+  // 整批播放 / 加入队列请用「播放已加载 / 加入队列」按钮
+  await player.playTrack(track);
   if (player.error) message.error(player.error);
 }
 

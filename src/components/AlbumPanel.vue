@@ -215,12 +215,9 @@ function goBack() {
 }
 
 async function onPlay(track: Track) {
-  // 以当前列表为播放上下文，上下曲继续本专辑/歌单
-  const list = tracks.value;
-  const idx = list.findIndex(
-    (t) => `${t.source}-${t.id}` === `${track.source}-${track.id}`,
-  );
-  await player.playAll(list, idx >= 0 ? idx : 0);
+  // 单曲播放：只播当前歌曲，不自动把整个列表加入队列；
+  // 整张播放 / 加入队列请用「播放全部 / 加入队列」按钮
+  await player.playTrack(track);
   if (player.error) message.error(player.error);
 }
 
