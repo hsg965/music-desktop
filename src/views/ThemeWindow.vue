@@ -53,7 +53,7 @@ onMounted(() => {
 
 <template>
   <div class="theme-win app-shell">
-    <header class="top skin-frost-bar" data-tauri-drag-region>
+    <header class="top skin-title-seamless" data-tauri-drag-region>
       <div class="title" data-tauri-drag-region>
         <Icon name="ri:palette-fill" :size="18" color="var(--primary)" />
         <span>主题皮肤</span>
@@ -130,7 +130,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0 12px 0 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   flex-shrink: 0;
 }
 
@@ -296,7 +296,7 @@ onMounted(() => {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
   flex-shrink: 0;
 }
 

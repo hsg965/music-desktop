@@ -352,10 +352,10 @@ watch(
   align-items: center;
   padding: 0 10px 8px;
   margin-bottom: 2px;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
-  backdrop-filter: blur(var(--panel-blur));
-  -webkit-backdrop-filter: blur(var(--panel-blur));
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  background: color-mix(in srgb, var(--bg) 35%, transparent);
+  backdrop-filter: blur(calc(var(--panel-blur) * 0.5));
+  -webkit-backdrop-filter: blur(calc(var(--panel-blur) * 0.5));
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;

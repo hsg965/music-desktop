@@ -174,7 +174,7 @@ onUnmounted(() => {
 <template>
   <NMessageProvider>
     <div class="settings-win app-shell">
-      <header class="titlebar skin-frost" data-tauri-drag-region>
+      <header class="titlebar skin-title-seamless" data-tauri-drag-region>
         <div class="titlebar-left" data-tauri-drag-region>
           <Icon name="ri:settings-3-fill" :size="16" color="var(--primary)" />
           <span data-tauri-drag-region>设置</span>
@@ -486,7 +486,7 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* 标题栏：桌面对话框风格 + 磨砂 */
+/* 标题栏：与壁纸一体 */
 .titlebar {
   height: 36px;
   flex-shrink: 0;
@@ -494,7 +494,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding-left: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   user-select: none;
 }
 

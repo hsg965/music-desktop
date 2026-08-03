@@ -155,8 +155,9 @@ onUnmounted(() => {
   gap: 10px;
   padding: 0 10px 0 8px;
   background: var(--bar-bg);
-  backdrop-filter: blur(var(--panel-blur));
-  -webkit-backdrop-filter: blur(var(--panel-blur));
+  backdrop-filter: blur(var(--panel-blur)) saturate(var(--glass-saturate, 1.35));
+  -webkit-backdrop-filter: blur(var(--panel-blur))
+    saturate(var(--glass-saturate, 1.35));
 }
 
 .cover {
