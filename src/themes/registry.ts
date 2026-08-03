@@ -288,15 +288,38 @@ export function applySkinToDocument(skin: SkinDefinition) {
   root.dataset.skin = skin.id;
   root.dataset.layout = "desktop";
   root.dataset.mode = skin.mode;
+  root.dataset.wallpaper = skin.wallpaper.type;
+
   for (const [key, value] of Object.entries(skin.tokens)) {
     root.style.setProperty(`--${key}`, value);
   }
+
   root.style.setProperty("--bg", skin.tokens.bg);
   root.style.setProperty("--sider-bg", skin.tokens["sider-bg"]);
   root.style.setProperty("--bar-bg", skin.tokens["bar-bg"]);
-  root.style.setProperty("--glass-blur", "0px");
+  root.style.setProperty("--panel-blur", skin.tokens["panel-blur"]);
+  root.style.setProperty("--glass-blur", skin.tokens["panel-blur"]);
   root.style.setProperty("--glass-bg", skin.tokens.surface);
   root.style.setProperty("--glass-bg-light", skin.tokens.surface);
   root.style.setProperty("--glass-border", skin.tokens.border);
+
+  if (skin.wallpaper.type === "css") {
+    root.style.setProperty("--wallpaper", skin.wallpaper.value);
+    root.style.removeProperty("--wallpaper-image");
+  } else {
+    const fallback = skin.wallpaper.fallback ?? skin.tokens.bg;
+    root.style.setProperty("--wallpaper", fallback);
+    root.style.setProperty(
+      "--wallpaper-image",
+      `url("${skin.wallpaper.src}")`,
+    );
+  }
+
+  if (skin.overlay) {
+    root.style.setProperty("--wallpaper-overlay", skin.overlay);
+  } else {
+    root.style.setProperty("--wallpaper-overlay", "none");
+  }
+
   root.style.colorScheme = skin.mode;
 }
