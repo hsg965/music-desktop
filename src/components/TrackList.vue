@@ -9,6 +9,8 @@ const props = withDefaults(
     showIndex?: boolean;
     activeKey?: string;
     removable?: boolean;
+    /** 紧凑模式（弹层/小尺寸），隐藏专辑列 */
+    compact?: boolean;
     /** 是否启用虚拟列表（长列表默认开） */
     virtual?: boolean;
     /** 专辑名可点击（仅搜索等入口开启） */
@@ -23,6 +25,7 @@ const props = withDefaults(
   {
     showIndex: true,
     removable: false,
+    compact: false,
     virtual: true,
     albumLink: false,
     infinite: false,
@@ -189,7 +192,7 @@ watch(
 <template>
   <div ref="scroller" class="track-list-scroller">
     <div class="track-list" :style="useVirtual ? { minHeight: totalH + 36 + 'px' } : undefined">
-      <div class="track-head">
+      <div class="track-head" :class="{ compact }">
         <div class="col-idx">#</div>
         <div class="col-main">标题</div>
         <div class="col-album">专辑</div>
@@ -202,7 +205,7 @@ watch(
         v-for="{ track, index } in visibleTracks"
         :key="trackKey(track)"
         class="track-row"
-        :class="{ active: activeKey === trackKey(track) }"
+        :class="{ active: activeKey === trackKey(track), compact }"
         :style="{ height: ROW_H + 'px' }"
         @dblclick="emit('play', track)"
       >
@@ -379,6 +382,18 @@ watch(
 .track-row.active {
   background: var(--primary-soft);
   border-radius: var(--radius-sm);
+}
+
+/* 紧凑模式：隐藏专辑列，适配弹层等小尺寸场景 */
+.track-head.compact,
+.track-row.compact {
+  grid-template-columns: 36px minmax(0, 1fr) 96px;
+  padding: 0 8px;
+}
+
+.track-head.compact .col-album,
+.track-row.compact .col-album {
+  display: none;
 }
 
 .col-idx {

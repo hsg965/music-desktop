@@ -30,3 +30,6 @@ src-tauri/gen/schemas
 
 # Updater signing keys (never commit private key)
 src-tauri/.tauri-keys/
+
+# pnpm local store (workspace)
+.pnpm-store/

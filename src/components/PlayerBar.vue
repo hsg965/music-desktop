@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { NButton, NSlider, NTooltip, NSpin } from "naive-ui";
+import { computed, ref } from "vue";
+import { NButton, NPopover, NSlider, NTooltip, NSpin, useMessage } from "naive-ui";
 import { usePlayerStore } from "../stores/player";
 import { useSettingsStore } from "../stores/settings";
 import { formatTime } from "../utils/lrc";
@@ -8,11 +8,15 @@ import { openDesktopLyric, openMiniPlayer } from "../utils/windows";
 import Icon from "./Icon.vue";
 import { useDownloadModal } from "../composables/useDownloadModal";
 import { useImmersiveLyric } from "../composables/useImmersiveLyric";
+import TrackList from "./TrackList.vue";
+import type { Track } from "../types/music";
 
 const player = usePlayerStore();
 const settings = useSettingsStore();
 const { open: openDownload } = useDownloadModal();
 const { open: lyricOpen, toggle: toggleImmersiveLyric } = useImmersiveLyric();
+const message = useMessage();
+const queueShow = ref(false);
 
 const artist = computed(
   () => (player.currentTrack?.artist || []).join(" / ") || "未知歌手",
@@ -22,6 +26,11 @@ const modeIcon = computed(() => {
   if (player.mode === "single") return "ri:repeat-one-fill";
   if (player.mode === "order") return "ri:order-play-fill";
   return "ri:repeat-fill";
+});
+
+const activeKey = computed(() => {
+  const t = player.currentTrack;
+  return t ? `${t.source}-${t.id}` : "";
 });
 
 const modeTip = computed(() => {
@@ -50,6 +59,25 @@ async function toggleLyricWin() {
 
 function openNowPlaying() {
   toggleImmersiveLyric();
+}
+
+function onQueuePlay(track: Track) {
+  const idx = player.queue.findIndex(
+    (t) => `${t.source}-${t.id}` === `${track.source}-${track.id}`,
+  );
+  if (idx < 0) return;
+  queueShow.value = false;
+  void player.playAt(idx);
+}
+
+function onQueueRemove(index: number) {
+  player.removeFromQueue(index);
+}
+
+function clearQueue() {
+  player.clearQueue();
+  queueShow.value = false;
+  message.success("已清空队列");
 }
 </script>
 
@@ -146,6 +174,73 @@ function openNowPlaying() {
           </template>
           桌面歌词
         </NTooltip>
+        <NPopover
+          v-model:show="queueShow"
+          trigger="click"
+          placement="top-end"
+          :width="380"
+          :raw="true"
+          :arrow="false"
+          :content-style="{
+            background: 'var(--bg)',
+            color: 'var(--text)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow)',
+          }"
+        >
+          <template #trigger>
+            <NTooltip>
+              <template #trigger>
+                <button
+                  type="button"
+                  class="ctl-btn queue-btn"
+                  :class="{ open: queueShow }"
+                >
+                  <Icon name="ri:play-list-2-line" :size="16" />
+                  <span v-if="player.queue.length" class="queue-badge">
+                    {{ player.queue.length }}
+                  </span>
+                </button>
+              </template>
+              播放队列
+            </NTooltip>
+          </template>
+          <div class="queue-pop">
+            <header class="queue-pop-head">
+              <div class="queue-pop-title">
+                播放队列
+                <span class="queue-pop-count">
+                  共 {{ player.queue.length }} 首
+                </span>
+              </div>
+              <button
+                type="button"
+                class="queue-clear"
+                :disabled="!player.queue.length"
+                @click="clearQueue"
+              >
+                <Icon name="ri:delete-bin-line" :size="14" />
+                清空
+              </button>
+            </header>
+            <div class="queue-pop-list">
+              <TrackList
+                v-if="player.queue.length"
+                :tracks="player.queue"
+                :active-key="activeKey"
+                compact
+                removable
+                @play="onQueuePlay"
+                @remove="onQueueRemove"
+                @download="openDownload"
+              />
+              <div v-else class="queue-pop-empty">
+                <Icon name="ri:play-list-2-line" :size="22" color="var(--text-faint)" />
+                <span>队列为空，去热榜或搜索添加歌曲</span>
+              </div>
+            </div>
+          </div>
+        </NPopover>
       </div>
       <div class="progress">
         <span class="time">{{ formatTime(player.currentTime) }}</span>
@@ -390,5 +485,99 @@ html[data-mode="light"] .ctl-play {
   .vol-slider {
     width: 72px;
   }
+}
+
+/* 播放队列弹层 */
+.queue-btn {
+  position: relative;
+}
+
+.queue-btn.open {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.queue-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.queue-pop {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.queue-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.queue-pop-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.queue-pop-count {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+.queue-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.queue-clear:hover:not(:disabled) {
+  color: #e5484d;
+  background: var(--surface-2);
+}
+
+.queue-clear:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.queue-pop-list {
+  height: min(360px, 52vh);
+}
+
+.queue-pop-empty {
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-faint);
 }
 </style>
