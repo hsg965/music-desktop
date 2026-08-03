@@ -7,12 +7,19 @@ export type SkinId =
   | "cobalt"
   | "slate"
   | "porcelain"
-  | "paper";
+  | "paper"
+  | "honey-pop"
+  | "moss-forest";
 
-/** 统一桌面壳布局；皮肤只改色，不改结构 */
+/** 统一桌面壳布局；皮肤只改色与壁纸，不改结构 */
 export type LayoutId = "desktop";
 
 export type SkinMode = "dark" | "light";
+
+/** 壁纸：CSS background 值，或 public 下图片 */
+export type SkinWallpaper =
+  | { type: "css"; value: string }
+  | { type: "image"; src: string; fallback?: string };
 
 /** CSS 变量键（不含 -- 前缀） */
 export type TokenKey =
@@ -54,6 +61,10 @@ export interface SkinDefinition {
   layout: LayoutId;
   /** 设置页预览色条 */
   preview: [string, string, string];
+  /** 全窗壁纸 */
+  wallpaper: SkinWallpaper;
+  /** 叠在壁纸上的可选遮罩（CSS background） */
+  overlay?: string;
   tokens: SkinTokens;
   naiveOverrides: GlobalThemeOverrides;
 }
