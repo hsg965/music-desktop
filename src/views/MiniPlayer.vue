@@ -69,7 +69,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="mini" data-tauri-drag-region>
+  <div class="mini app-shell" data-tauri-drag-region>
     <div class="progress" aria-hidden="true">
       <div class="progress-fill" :style="{ width: progress + '%' }" />
     </div>
@@ -128,7 +128,7 @@ onUnmounted(() => {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  background: var(--bar-bg);
+  background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
   overflow: hidden;
@@ -154,6 +154,9 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   padding: 0 10px 0 8px;
+  background: var(--bar-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
 }
 
 .cover {
@@ -242,20 +245,15 @@ onUnmounted(() => {
 .btn-main {
   width: 34px;
   height: 34px;
-  background: var(--text);
-  color: var(--bg);
+  background: var(--primary);
+  color: #fff;
 }
 
 .btn-main:hover {
-  background: var(--text);
-  color: var(--bg);
-  opacity: 0.92;
-  transform: scale(1.04);
-}
-
-html[data-mode="light"] .btn-main {
-  background: var(--text);
+  background: var(--primary-hover);
   color: #fff;
+  opacity: 1;
+  transform: scale(1.04);
 }
 
 .btn-close:hover {

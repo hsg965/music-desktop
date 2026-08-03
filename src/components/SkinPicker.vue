@@ -62,7 +62,9 @@ function select(id: SkinId) {
   text-align: left;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--bar-bg) 88%, transparent);
+  backdrop-filter: blur(calc(var(--panel-blur) * 0.5));
+  -webkit-backdrop-filter: blur(calc(var(--panel-blur) * 0.5));
   overflow: hidden;
   cursor: pointer;
   padding: 0;

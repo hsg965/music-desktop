@@ -52,8 +52,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="theme-win">
-    <header class="top" data-tauri-drag-region>
+  <div class="theme-win app-shell">
+    <header class="top skin-frost-bar" data-tauri-drag-region>
       <div class="title" data-tauri-drag-region>
         <Icon name="ri:palette-fill" :size="18" color="var(--primary)" />
         <span>主题皮肤</span>
@@ -107,8 +107,8 @@ onMounted(() => {
       </div>
     </div>
 
-    <footer class="bottom">
-      <span class="hint">点击即可切换，主窗口会同步应用</span>
+    <footer class="bottom skin-frost-bar">
+      <span class="hint">点击即可切换，主窗口与其它窗口会同步应用</span>
       <NButton size="small" type="primary" @click="closeWin">完成</NButton>
     </footer>
   </div>
@@ -119,7 +119,7 @@ onMounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-grad, var(--bg));
+  background: transparent;
   color: var(--text);
   overflow: hidden;
 }
@@ -131,7 +131,6 @@ onMounted(() => {
   justify-content: space-between;
   padding: 0 12px 0 14px;
   border-bottom: 1px solid var(--border);
-  background: var(--bar-bg);
   flex-shrink: 0;
 }
 
@@ -203,7 +202,9 @@ onMounted(() => {
   text-align: left;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 12px);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--bar-bg) 88%, transparent);
+  backdrop-filter: blur(calc(var(--panel-blur) * 0.5));
+  -webkit-backdrop-filter: blur(calc(var(--panel-blur) * 0.5));
   overflow: hidden;
   cursor: pointer;
   padding: 0;
@@ -273,7 +274,7 @@ onMounted(() => {
 
 .skin-meta {
   padding: 10px 12px 12px;
-  background: var(--bar-bg);
+  background: color-mix(in srgb, var(--bar-bg) 70%, transparent);
 }
 
 .skin-name {
@@ -296,7 +297,6 @@ onMounted(() => {
   gap: 12px;
   padding: 10px 16px;
   border-top: 1px solid var(--border);
-  background: var(--bar-bg);
   flex-shrink: 0;
 }
 

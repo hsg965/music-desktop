@@ -393,21 +393,27 @@ onUnmounted(() => {
   background: transparent;
   opacity: 0;
   transition: opacity 0.12s ease;
+  overflow: hidden;
 }
 
+/* 悬停：底层皮肤壁纸 + 上层磨砂（token 与主窗一致） */
 .glass.on {
   opacity: 1;
-  background: rgba(14, 14, 18, 0.84);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(14px) saturate(1.1);
-  -webkit-backdrop-filter: blur(14px) saturate(1.1);
-}
-
-html[data-mode="light"] .glass.on {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(0, 0, 0, 0.06);
-  box-shadow: 0 8px 24px rgba(20, 30, 40, 0.1);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--panel-blur)) saturate(1.12);
+  -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(1.12);
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, var(--bar-bg) 90%, transparent),
+      color-mix(in srgb, var(--bar-bg) 90%, transparent)
+    ),
+    var(--wallpaper-overlay, none),
+    var(--wallpaper-image, none),
+    var(--wallpaper, var(--bg));
+  background-size: auto, auto, cover, auto;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .no-drag {
@@ -454,13 +460,9 @@ html[data-mode="light"] .glass.on {
 
 .drag-meta {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--text-muted);
   font-weight: 500;
   max-width: 100%;
-}
-
-html[data-mode="light"] .dl.is-hover .drag-meta {
-  color: var(--text-muted);
 }
 
 .drag-actions {
@@ -484,7 +486,7 @@ html[data-mode="light"] .dl.is-hover .drag-meta {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--text-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -492,19 +494,10 @@ html[data-mode="light"] .dl.is-hover .drag-meta {
 }
 
 .dl.is-hover .icon-btn {
-  color: rgba(255, 255, 255, 0.88);
-}
-
-html[data-mode="light"] .dl.is-hover .icon-btn {
-  color: var(--text-muted);
+  color: var(--text);
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-html[data-mode="light"] .dl.is-hover .icon-btn:hover {
   background: var(--surface-2);
   color: var(--text);
 }
@@ -528,22 +521,23 @@ html[data-mode="light"] .dl.is-hover .icon-btn:hover {
   gap: 4px;
   height: 26px;
   padding: 0 10px 0 8px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
+  background: color-mix(in srgb, var(--bar-bg) 90%, var(--bg));
+  color: var(--text);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
 }
 
 .lock-chip-btn:hover {
-  background: rgba(0, 0, 0, 0.72);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: var(--surface-2);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 /* 歌词：中间区域；悬停时加大底部 padding，躲开控件 */
@@ -597,13 +591,10 @@ html[data-mode="light"] .dl.is-hover .icon-btn:hover {
   opacity: 0.28;
 }
 
+/* 悬停磨砂时用皮肤文字色 */
 .dl.is-hover .line.side {
-  color: rgba(255, 255, 255, 0.52);
-  text-shadow: none;
-}
-
-html[data-mode="light"] .dl.is-hover .line.side {
   color: var(--text-muted);
+  text-shadow: none;
 }
 
 .line.current {
@@ -624,12 +615,8 @@ html[data-mode="light"] .dl.is-hover .line.side {
 }
 
 .dl.is-hover .current-main {
-  color: #fff;
+  color: var(--dl-accent, var(--primary));
   text-shadow: none;
-}
-
-html[data-mode="light"] .dl.is-hover .current-main {
-  color: var(--text);
 }
 
 .current-trans {
@@ -642,12 +629,8 @@ html[data-mode="light"] .dl.is-hover .current-main {
 }
 
 .dl.is-hover .current-trans {
-  color: rgba(255, 255, 255, 0.5);
-  text-shadow: none;
-}
-
-html[data-mode="light"] .dl.is-hover .current-trans {
   color: var(--text-muted);
+  text-shadow: none;
 }
 
 @keyframes line-in {
@@ -694,23 +677,18 @@ html[data-mode="light"] .dl.is-hover .current-trans {
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
 }
 
-html[data-mode="light"] .dl.is-hover .tb-btn {
-  color: var(--text-muted);
+.dl.is-hover .tb-btn {
+  color: var(--text);
 }
 
 .tb-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-html[data-mode="light"] .dl.is-hover .tb-btn:hover {
   background: var(--surface-2);
   color: var(--text);
 }
@@ -720,8 +698,8 @@ html[data-mode="light"] .dl.is-hover .tb-btn:hover {
   height: 40px;
   border: none;
   border-radius: 50%;
-  background: #fff;
-  color: #111;
+  background: var(--primary);
+  color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -730,11 +708,7 @@ html[data-mode="light"] .dl.is-hover .tb-btn:hover {
 
 .tb-play:hover {
   transform: scale(1.05);
-}
-
-html[data-mode="light"] .dl.is-hover .tb-play {
-  background: var(--text);
-  color: #fff;
+  background: var(--primary-hover);
 }
 
 .tb-font {

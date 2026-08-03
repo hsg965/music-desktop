@@ -173,8 +173,8 @@ onUnmounted(() => {
 
 <template>
   <NMessageProvider>
-    <div class="settings-win">
-      <header class="titlebar" data-tauri-drag-region>
+    <div class="settings-win app-shell">
+      <header class="titlebar skin-frost" data-tauri-drag-region>
         <div class="titlebar-left" data-tauri-drag-region>
           <Icon name="ri:settings-3-fill" :size="16" color="var(--primary)" />
           <span data-tauri-drag-region>设置</span>
@@ -185,7 +185,7 @@ onUnmounted(() => {
       </header>
 
       <div class="body">
-        <nav class="side">
+        <nav class="side skin-frost">
           <button
             v-for="s in sections"
             :key="s.id"
@@ -481,12 +481,12 @@ onUnmounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
   overflow: hidden;
 }
 
-/* 标题栏：桌面对话框风格 */
+/* 标题栏：桌面对话框风格 + 磨砂 */
 .titlebar {
   height: 36px;
   flex-shrink: 0;
@@ -495,7 +495,6 @@ onUnmounted(() => {
   justify-content: space-between;
   padding-left: 12px;
   border-bottom: 1px solid var(--border);
-  background: var(--sider-bg);
   user-select: none;
 }
 
@@ -531,13 +530,12 @@ onUnmounted(() => {
   display: flex;
 }
 
-/* 左侧分类：纯文字列表，无卡片 */
+/* 左侧分类：磨砂侧栏，透出壁纸 */
 .side {
   width: 132px;
   flex-shrink: 0;
   padding: 10px 0;
   border-right: 1px solid var(--border);
-  background: var(--sider-bg);
   overflow-y: auto;
 }
 
@@ -567,14 +565,14 @@ onUnmounted(() => {
   border-left-color: var(--primary);
 }
 
-/* 右侧内容：表单式排版 */
+/* 右侧内容：透明融入壁纸 */
 .content {
   flex: 1;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: transparent;
 }
 
 .page-title {

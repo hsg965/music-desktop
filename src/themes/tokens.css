@@ -337,3 +337,25 @@
   border-radius: var(--cover-radius);
   overflow: hidden;
 }
+
+/* ========== 副窗口共用：壁纸壳 + 磨砂条 ==========
+ * 主题窗 / 设置窗 / 迷你播放器根节点加 app-shell 即可铺壁纸；
+ * 顶栏侧栏底栏用 skin-frost / skin-frost-bar。
+ */
+.skin-frost {
+  background: var(--sider-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+}
+
+.skin-frost-bar {
+  background: var(--bar-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+}
+
+.skin-surface-soft {
+  background: var(--surface);
+  backdrop-filter: blur(calc(var(--panel-blur) * 0.6));
+  -webkit-backdrop-filter: blur(calc(var(--panel-blur) * 0.6));
+}
