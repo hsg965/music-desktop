@@ -312,6 +312,93 @@ export const SKINS: SkinDefinition[] = [
       },
     },
   },
+  {
+    id: "honey-pop",
+    name: "蜜糖泡泡",
+    description: "暖黄可爱壁纸 · 奶油磨砂壳",
+    mode: "light",
+    layout: "desktop",
+    preview: ["#fff6d6", "#f5b942", "#ffe8a3"],
+    wallpaper: {
+      type: "image",
+      src: "/skins/honey-pop/bg.jpg",
+      fallback:
+        "linear-gradient(160deg, #fff6d6 0%, #ffe8a3 50%, #ffd77a 100%)",
+    },
+    overlay:
+      "linear-gradient(180deg, rgba(255,250,230,0.25) 0%, transparent 40%, rgba(80,50,10,0.12) 100%)",
+    tokens: lightTokens({
+      bg: "#fff6d6",
+      "sider-bg": "rgba(255,252,240,0.58)",
+      "bar-bg": "rgba(255,250,235,0.62)",
+      primary: "#d97706",
+      "primary-hover": "#f59e0b",
+      "primary-pressed": "#b45309",
+      "primary-soft": "rgba(217,119,6,0.14)",
+      "accent-secondary": "#fbbf24",
+      "panel-blur": "16px",
+      text: "rgba(60,40,10,0.92)",
+      "text-muted": "rgba(60,40,10,0.58)",
+      "text-faint": "rgba(60,40,10,0.4)",
+      border: "rgba(120,80,20,0.12)",
+      "border-strong": "rgba(120,80,20,0.2)",
+    }),
+    naiveOverrides: {
+      common: {
+        primaryColor: "#d97706",
+        primaryColorHover: "#f59e0b",
+        primaryColorPressed: "#b45309",
+        primaryColorSuppl: "#d97706",
+        bodyColor: "#fff6d6",
+        cardColor: "#fffaf0",
+        modalColor: "#fffaf0",
+        popoverColor: "#ffffff",
+        borderColor: "rgba(120,80,20,0.12)",
+        borderRadius: "8px",
+      },
+    },
+  },
+  {
+    id: "moss-forest",
+    name: "青苔森野",
+    description: "林雾壁纸 · 松绿磨砂壳",
+    mode: "dark",
+    layout: "desktop",
+    preview: ["#0f1a14", "#3d8f6a", "#1a2e24"],
+    wallpaper: {
+      type: "image",
+      src: "/skins/moss-forest/bg.jpg",
+      fallback:
+        "linear-gradient(165deg, #0a1410 0%, #152820 50%, #0f1a14 100%)",
+    },
+    overlay:
+      "linear-gradient(180deg, rgba(0,0,0,0.25) 0%, transparent 35%, rgba(0,0,0,0.35) 100%)",
+    tokens: darkTokens({
+      bg: "#0f1a14",
+      "sider-bg": "rgba(8,16,12,0.55)",
+      "bar-bg": "rgba(12,22,16,0.55)",
+      primary: "#3d8f6a",
+      "primary-hover": "#4eab80",
+      "primary-pressed": "#2f7355",
+      "primary-soft": "rgba(61,143,106,0.18)",
+      "accent-secondary": "#7bc4a0",
+      "panel-blur": "16px",
+    }),
+    naiveOverrides: {
+      common: {
+        primaryColor: "#3d8f6a",
+        primaryColorHover: "#4eab80",
+        primaryColorPressed: "#2f7355",
+        primaryColorSuppl: "#3d8f6a",
+        bodyColor: "#0f1a14",
+        cardColor: "#15241c",
+        modalColor: "#15241c",
+        popoverColor: "#1a2e24",
+        borderColor: "rgba(255,255,255,0.08)",
+        borderRadius: "8px",
+      },
+    },
+  },
 ];
 
 export function resolveSkinId(id?: string | null): SkinId {
