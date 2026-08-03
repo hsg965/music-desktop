@@ -177,11 +177,14 @@ const themeOverrides = computed<GlobalThemeOverrides>(() => {
     },
     ColorPicker: {
       borderRadius: t["radius-md"],
-      border: ctrlBorder,
-      borderHover: ctrlBorderHover,
-      borderActive: ctrlBorderFocus,
-      boxShadow: "none",
+      color: t.bg,
+      textColor: t.text,
+      border: `1px solid ${t.border}`,
+      borderHover: `1px solid ${t["border-strong"]}`,
+      borderActive: `1px solid ${t.primary}`,
+      boxShadow: t.shadow || "0 8px 24px rgba(0,0,0,0.2)",
       boxShadowFocus: `0 0 0 2px ${t["primary-soft"]}`,
+      dividerColor: t.border,
     },
     Card: {
       color: ctrl,

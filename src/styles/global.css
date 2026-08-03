@@ -241,11 +241,10 @@ html[data-mode="dark"] .n-base-selection:not(.n-base-selection--disabled) {
   color: var(--text) !important;
 }
 
-/* 下拉/弹出层：强制雾面底，去掉 naive 默认大白块 */
+/* 下拉/弹出层：强制雾面底，去掉 naive 默认大白块（不含颜色选择器面板） */
 .n-base-select-menu,
-.n-popover:not(.n-popover--raw),
-.n-dropdown-menu,
-.n-color-picker-panel {
+.n-popover:not(.n-popover--raw):not(:has(.n-color-picker-panel)),
+.n-dropdown-menu {
   --n-color: color-mix(in srgb, var(--bg) 72%, transparent) !important;
   --n-option-text-color: var(--text) !important;
   --n-option-text-color-active: var(--primary) !important;
@@ -264,8 +263,8 @@ html[data-mode="dark"] .n-base-selection:not(.n-base-selection--disabled) {
 
 html[data-mode="dark"] .n-base-select-menu,
 html[data-mode="dark"] .n-dropdown-menu,
-html[data-mode="dark"] .n-popover:not(.n-popover--raw),
-html[data-mode="dark"] .n-color-picker-panel {
+html[data-mode="dark"]
+  .n-popover:not(.n-popover--raw):not(:has(.n-color-picker-panel)) {
   --n-color: color-mix(in srgb, var(--bg) 78%, transparent) !important;
   background: color-mix(in srgb, var(--bg) 78%, transparent) !important;
   background-color: color-mix(in srgb, var(--bg) 78%, transparent) !important;
@@ -285,10 +284,83 @@ html[data-mode="dark"] .n-color-picker-panel {
   color: var(--primary) !important;
 }
 
-/* ColorPicker 触发器 */
+/* ========== ColorPicker：触发器露出色块，面板用皮肤实色壳 ========== */
+.n-color-picker {
+  border-radius: var(--radius-md);
+}
+
+/* 触发器：不要盖雾面底，否则色块看不见/发白 */
 .n-color-picker-trigger {
-  border-color: var(--border) !important;
-  background: var(--surface-2) !important;
+  border: 1px solid var(--border) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  overflow: hidden;
+  border-radius: var(--radius-md) !important;
+}
+
+.n-color-picker-trigger .n-color-picker-trigger__fill,
+.n-color-picker__fill {
+  border-radius: inherit;
+}
+
+.n-color-picker-checkboard {
+  border-radius: inherit;
+}
+
+/* 面板：跟皮肤同色实底，保证色板/滑条可读，不要半透明糊在色域上 */
+.n-color-picker-panel {
+  --n-color: var(--bg) !important;
+  --n-text-color: var(--text) !important;
+  --n-border: 1px solid var(--border) !important;
+  --n-divider-color: var(--border) !important;
+  color: var(--text) !important;
+  background: var(--bg) !important;
+  background-color: var(--bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 包住颜色面板的 popover 也用实色，避免外层白框 */
+.n-popover:has(.n-color-picker-panel) {
+  --n-color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 !important;
+}
+
+.n-color-picker-panel .n-color-picker-control {
+  color: var(--text);
+}
+
+.n-color-picker-panel .n-input {
+  --n-color: var(--surface-2) !important;
+  --n-text-color: var(--text) !important;
+  --n-border: 1px solid var(--border) !important;
+  --n-placeholder-color: var(--text-faint) !important;
+}
+
+.n-color-picker-panel .n-button {
+  color: var(--text) !important;
+}
+
+.n-color-picker-panel .n-color-picker-input__mode {
+  color: var(--text-muted) !important;
+}
+
+.n-color-picker-handle {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.n-color-picker-handle__fill {
+  border: 1px solid rgba(255, 255, 255, 0.85);
 }
 
 /* ----- 3) 默认按钮：正文色 + 可见底/边框 ----- */
