@@ -284,35 +284,73 @@ html[data-mode="dark"]
   color: var(--primary) !important;
 }
 
-/* ========== ColorPicker：触发器露出色块，面板用皮肤实色壳 ========== */
+/* ========== ColorPicker 布局修复 ==========
+ * 问题：触发器常被设成 148px，popover 若跟随触发器宽度，
+ * 会把默认 240px 面板挤扁；同时全局样式勿盖住色块填充。
+ */
 .n-color-picker {
+  display: inline-block !important;
+  box-sizing: border-box !important;
+  width: 100%;
+  max-width: 168px;
+  min-width: 120px;
+  height: var(--n-height, 28px) !important;
+  vertical-align: middle;
   border-radius: var(--radius-md);
+  flex: 0 0 auto;
 }
 
-/* 触发器：不要盖雾面底，否则色块看不见/发白 */
+/* 触发器：透明，露出内部色块；保留高度 */
 .n-color-picker-trigger {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: var(--n-height, 28px) !important;
   border: 1px solid var(--border) !important;
   background: transparent !important;
   background-color: transparent !important;
   box-shadow: none !important;
   overflow: hidden;
   border-radius: var(--radius-md) !important;
+  box-sizing: border-box !important;
 }
 
-.n-color-picker-trigger .n-color-picker-trigger__fill,
 .n-color-picker__fill {
-  border-radius: inherit;
+  position: absolute !important;
+  left: 4px !important;
+  right: 4px !important;
+  top: 4px !important;
+  bottom: 4px !important;
+  border-radius: calc(var(--radius-md) - 2px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.n-color-picker__value {
+  position: relative !important;
+  z-index: 1;
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  pointer-events: none;
 }
 
 .n-color-picker-checkboard {
   border-radius: inherit;
 }
 
-/* 面板：跟皮肤同色实底，保证色板/滑条可读，不要半透明糊在色域上 */
+/* 面板固定宽度，禁止被 popover / 触发器宽度压缩 */
 .n-color-picker-panel {
+  width: 240px !important;
+  min-width: 240px !important;
+  max-width: 240px !important;
+  box-sizing: border-box !important;
+  margin: 4px 0 !important;
   --n-color: var(--bg) !important;
   --n-text-color: var(--text) !important;
-  --n-border: 1px solid var(--border) !important;
+  --n-border-radius: var(--radius-md) !important;
   --n-divider-color: var(--border) !important;
   color: var(--text) !important;
   background: var(--bg) !important;
@@ -324,8 +362,71 @@ html[data-mode="dark"]
   -webkit-backdrop-filter: none !important;
 }
 
-/* 包住颜色面板的 popover 也用实色，避免外层白框 */
-.n-popover:has(.n-color-picker-panel) {
+/* 色板区域保持默认高度，避免被压扁 */
+.n-color-picker-pallete {
+  height: 180px !important;
+  width: 100% !important;
+  position: relative !important;
+  margin-bottom: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.n-color-picker-control {
+  padding: 12px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.n-color-picker-preview {
+  display: flex !important;
+  width: 100% !important;
+  align-items: flex-start !important;
+}
+
+.n-color-picker-preview__sliders {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.n-color-picker-preview__preview {
+  flex: 0 0 30px !important;
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.n-color-picker-slider {
+  width: 100% !important;
+  position: relative !important;
+  margin-bottom: 8px !important;
+}
+
+.n-color-picker-input {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  gap: 0 !important;
+}
+
+.n-color-picker-input .n-input {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+.n-color-picker-input__mode {
+  flex: 0 0 72px !important;
+  width: 72px !important;
+  color: var(--text-muted) !important;
+  text-align: center !important;
+}
+
+/* popover 外层不要锁死触发器宽度 */
+.n-popover:has(.n-color-picker-panel),
+.n-popover:has(.n-color-picker-panel) .n-popover-shared,
+.n-popover:has(.n-color-picker-panel) .n-popover__content {
+  width: auto !important;
+  min-width: 240px !important;
+  max-width: none !important;
   --n-color: transparent !important;
   background: transparent !important;
   background-color: transparent !important;
@@ -336,31 +437,37 @@ html[data-mode="dark"]
   padding: 0 !important;
 }
 
-.n-color-picker-panel .n-color-picker-control {
-  color: var(--text);
-}
-
 .n-color-picker-panel .n-input {
   --n-color: var(--surface-2) !important;
+  --n-color-focus: var(--surface-2) !important;
   --n-text-color: var(--text) !important;
   --n-border: 1px solid var(--border) !important;
   --n-placeholder-color: var(--text-faint) !important;
+  background: transparent !important;
 }
 
 .n-color-picker-panel .n-button {
   color: var(--text) !important;
+  flex-shrink: 0 !important;
 }
 
-.n-color-picker-panel .n-color-picker-input__mode {
-  color: var(--text-muted) !important;
+.n-color-picker-action {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 8px;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .n-color-picker-handle {
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.45);
+  background-color: #fff !important;
+  overflow: hidden;
 }
 
 .n-color-picker-handle__fill {
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  border: 2px solid #fff !important;
+  box-sizing: border-box;
 }
 
 /* ----- 3) 默认按钮：正文色 + 可见底/边框 ----- */

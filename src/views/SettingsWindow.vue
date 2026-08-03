@@ -307,14 +307,15 @@ onUnmounted(() => {
                     </NRadioGroup>
                     <div
                       v-if="settings.desktopLyricColorMode === 'custom'"
-                      class="inline-gap"
+                      class="inline-gap color-row"
                     >
                       <NColorPicker
+                        class="lyric-color-picker"
                         :value="settings.desktopLyricColor"
                         :show-alpha="false"
                         :modes="['hex']"
                         size="small"
-                        style="width: 148px"
+                        :show-preview="true"
                         @update:value="settings.setDesktopLyricColor"
                       />
                       <code class="hex">{{ settings.desktopLyricColor }}</code>
@@ -704,10 +705,25 @@ onUnmounted(() => {
   margin-top: 10px;
 }
 
+.color-row {
+  width: 100%;
+  min-width: 0;
+}
+
+/* 触发器固定宽度；弹出面板在 body 上由全局 CSS 固定 240px */
+.color-row :deep(.lyric-color-picker),
+.color-row :deep(.n-color-picker) {
+  width: 148px !important;
+  max-width: 148px !important;
+  min-width: 148px !important;
+  flex: 0 0 148px;
+}
+
 .hex {
   font-size: 12px;
   color: var(--text-muted);
   font-family: ui-monospace, Consolas, monospace;
+  flex: 0 0 auto;
 }
 
 .meter {
