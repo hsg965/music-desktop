@@ -33,3 +33,6 @@ src-tauri/.tauri-keys/
 
 # pnpm local store (workspace)
 .pnpm-store/
+
+# Brainstorm / local agent artifacts
+.superpowers/
