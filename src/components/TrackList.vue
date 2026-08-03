@@ -353,7 +353,9 @@ watch(
   padding: 0 10px 8px;
   margin-bottom: 2px;
   border-bottom: 1px solid var(--border);
-  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;

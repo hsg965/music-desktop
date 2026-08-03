@@ -41,7 +41,7 @@ function darkTokens(partial: Partial<SkinDefinition["tokens"]> & Pick<
     "player-height": "76px",
     "sider-width": "204px",
     "cover-radius": "6px",
-    "panel-blur": "0px",
+    "panel-blur": "14px",
     "noise-opacity": "0",
     "grid-opacity": "0",
     ...partial,
@@ -69,7 +69,7 @@ function lightTokens(partial: Partial<SkinDefinition["tokens"]> & Pick<
     "player-height": "76px",
     "sider-width": "204px",
     "cover-radius": "6px",
-    "panel-blur": "0px",
+    "panel-blur": "14px",
     "noise-opacity": "0",
     "grid-opacity": "0",
     ...partial,
@@ -80,14 +80,21 @@ export const SKINS: SkinDefinition[] = [
   {
     id: "obsidian",
     name: "黑曜石",
-    description: "深空黑底，青绿强调 · 主流播放器风格",
+    description: "深空黑底青绿辉光 · 毛玻璃侧栏与播放条",
     mode: "dark",
     layout: "desktop",
     preview: ["#121212", "#1db954", "#282828"],
+    wallpaper: {
+      type: "css",
+      value:
+        "radial-gradient(1200px 600px at 20% -10%, rgba(29,185,84,0.22), transparent 55%), radial-gradient(900px 500px at 100% 80%, rgba(30,80,60,0.35), transparent 50%), linear-gradient(165deg, #0a0a0a 0%, #121212 45%, #0d1510 100%)",
+    },
+    overlay:
+      "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, transparent 30%, rgba(0,0,0,0.2) 100%)",
     tokens: darkTokens({
       bg: "#121212",
-      "sider-bg": "#000000",
-      "bar-bg": "#181818",
+      "sider-bg": "rgba(0,0,0,0.55)",
+      "bar-bg": "rgba(18,18,18,0.55)",
       primary: "#1db954",
       "primary-hover": "#1ed760",
       "primary-pressed": "#169c46",
@@ -112,14 +119,21 @@ export const SKINS: SkinDefinition[] = [
   {
     id: "cinnabar",
     name: "朱砂",
-    description: "暗夜红调 · 热门曲库气质",
+    description: "暗夜红烬壁纸 · 半透暖侧栏",
     mode: "dark",
     layout: "desktop",
     preview: ["#141414", "#ec4141", "#2a1a1a"],
+    wallpaper: {
+      type: "css",
+      value:
+        "radial-gradient(1000px 520px at 15% 0%, rgba(236,65,65,0.28), transparent 55%), radial-gradient(800px 480px at 95% 90%, rgba(120,30,30,0.4), transparent 52%), linear-gradient(160deg, #0c0808 0%, #141010 42%, #1a0e0e 100%)",
+    },
+    overlay:
+      "linear-gradient(180deg, rgba(0,0,0,0.18) 0%, transparent 28%, rgba(20,0,0,0.22) 100%)",
     tokens: darkTokens({
       bg: "#141414",
-      "sider-bg": "#0c0c0c",
-      "bar-bg": "#1a1a1a",
+      "sider-bg": "rgba(12,8,8,0.55)",
+      "bar-bg": "rgba(26,18,18,0.55)",
       primary: "#ec4141",
       "primary-hover": "#ff5a5a",
       "primary-pressed": "#c93434",
@@ -144,14 +158,21 @@ export const SKINS: SkinDefinition[] = [
   {
     id: "cobalt",
     name: "钴蓝",
-    description: "冷静蓝调 · 专注聆听",
+    description: "深海蓝径向光晕 · 毛玻璃壳层",
     mode: "dark",
     layout: "desktop",
     preview: ["#0f1419", "#3d8bfd", "#1a2330"],
+    wallpaper: {
+      type: "css",
+      value:
+        "radial-gradient(1100px 700px at 50% -15%, rgba(61,139,253,0.28), transparent 58%), radial-gradient(700px 500px at 0% 100%, rgba(20,50,100,0.4), transparent 50%), linear-gradient(170deg, #080c12 0%, #0f1419 48%, #0a121c 100%)",
+    },
+    overlay:
+      "linear-gradient(180deg, rgba(0,8,20,0.16) 0%, transparent 32%, rgba(0,0,0,0.22) 100%)",
     tokens: darkTokens({
       bg: "#0f1419",
-      "sider-bg": "#0a0e13",
-      "bar-bg": "#151b24",
+      "sider-bg": "rgba(8,12,18,0.55)",
+      "bar-bg": "rgba(15,22,32,0.55)",
       primary: "#3d8bfd",
       "primary-hover": "#5ca0ff",
       "primary-pressed": "#2f74d8",
@@ -176,14 +197,21 @@ export const SKINS: SkinDefinition[] = [
   {
     id: "slate",
     name: "岩灰",
-    description: "中性灰阶 · 低调专业",
+    description: "柔和灰阶渐变壁纸 · 半透专业壳",
     mode: "dark",
     layout: "desktop",
     preview: ["#1c1e22", "#a8b0bc", "#2a2d33"],
+    wallpaper: {
+      type: "css",
+      value:
+        "radial-gradient(900px 500px at 30% -5%, rgba(168,176,188,0.14), transparent 55%), linear-gradient(145deg, #14161a 0%, #1c1e22 40%, #22262c 100%), linear-gradient(0deg, #181a1e, #1e2026)",
+    },
+    overlay:
+      "linear-gradient(180deg, rgba(0,0,0,0.12) 0%, transparent 35%, rgba(0,0,0,0.18) 100%)",
     tokens: darkTokens({
       bg: "#1c1e22",
-      "sider-bg": "#16181c",
-      "bar-bg": "#22252b",
+      "sider-bg": "rgba(16,18,22,0.55)",
+      "bar-bg": "rgba(28,30,36,0.55)",
       primary: "#a8b0bc",
       "primary-hover": "#c0c7d0",
       "primary-pressed": "#8b93a0",
@@ -209,14 +237,21 @@ export const SKINS: SkinDefinition[] = [
   {
     id: "porcelain",
     name: "瓷白",
-    description: "干净浅色 · 日间办公",
+    description: "清凉白光壁纸 · 半透日间毛玻璃",
     mode: "light",
     layout: "desktop",
     preview: ["#f5f6f8", "#2563eb", "#ffffff"],
+    wallpaper: {
+      type: "css",
+      value:
+        "radial-gradient(1000px 560px at 18% -8%, rgba(37,99,235,0.12), transparent 55%), radial-gradient(800px 480px at 100% 90%, rgba(147,197,253,0.18), transparent 50%), linear-gradient(165deg, #eef1f6 0%, #f5f6f8 45%, #e8ecf2 100%)",
+    },
+    overlay:
+      "linear-gradient(180deg, rgba(255,255,255,0.35) 0%, transparent 40%, rgba(230,235,245,0.25) 100%)",
     tokens: lightTokens({
       bg: "#f5f6f8",
-      "sider-bg": "#ffffff",
-      "bar-bg": "#ffffff",
+      "sider-bg": "rgba(255,255,255,0.55)",
+      "bar-bg": "rgba(255,255,255,0.6)",
       primary: "#2563eb",
       "primary-hover": "#3b82f6",
       "primary-pressed": "#1d4ed8",
@@ -241,14 +276,21 @@ export const SKINS: SkinDefinition[] = [
   {
     id: "paper",
     name: "宣纸",
-    description: "暖白纸感 · 柔和阅读",
+    description: "暖纸质渐变壁纸 · 半透柔和壳层",
     mode: "light",
     layout: "desktop",
     preview: ["#f3f0ea", "#b45309", "#fffcf7"],
+    wallpaper: {
+      type: "css",
+      value:
+        "radial-gradient(1000px 540px at 25% -10%, rgba(180,83,9,0.1), transparent 55%), radial-gradient(700px 420px at 95% 85%, rgba(217,119,6,0.12), transparent 50%), linear-gradient(160deg, #efe8dc 0%, #f3f0ea 42%, #f7f2e8 100%)",
+    },
+    overlay:
+      "linear-gradient(180deg, rgba(255,252,247,0.4) 0%, transparent 38%, rgba(245,235,220,0.28) 100%)",
     tokens: lightTokens({
       bg: "#f3f0ea",
-      "sider-bg": "#fffcf7",
-      "bar-bg": "#fffcf7",
+      "sider-bg": "rgba(255,252,247,0.55)",
+      "bar-bg": "rgba(255,252,247,0.6)",
       primary: "#b45309",
       "primary-hover": "#c86614",
       "primary-pressed": "#92400e",
