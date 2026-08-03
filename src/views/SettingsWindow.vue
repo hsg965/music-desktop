@@ -26,6 +26,7 @@ import { useUpdater } from "../composables/useUpdater";
 import { clearAudioCache, getAudioCacheStats } from "../utils/audioCache";
 import { applySkin, getSkin } from "../themes/apply";
 import Icon from "../components/Icon.vue";
+import UpdateDialog from "../components/UpdateDialog.vue";
 
 type SectionId =
   | "appearance"
@@ -470,6 +471,7 @@ onUnmounted(() => {
       </div>
 
       <div v-if="toast" class="toast">{{ toast }}</div>
+      <UpdateDialog />
     </div>
   </NMessageProvider>
 </template>
