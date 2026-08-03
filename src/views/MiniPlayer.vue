@@ -38,6 +38,19 @@ async function closeMini() {
   }
 }
 
+/** 拖拽兜底：部分 WebView 下 data-tauri-drag-region 会被子层挡住 */
+async function onDragPointerDown(e: PointerEvent) {
+  if (e.button !== 0) return;
+  const t = e.target as HTMLElement | null;
+  if (t?.closest(".no-drag")) return;
+  try {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    await getCurrentWindow().startDragging();
+  } catch {
+    // ignore
+  }
+}
+
 function syncSkinFromStorage() {
   try {
     const raw = localStorage.getItem("music-desktop-settings");
@@ -69,33 +82,40 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="mini app-shell" data-tauri-drag-region>
-    <div class="progress" aria-hidden="true">
+  <div
+    class="mini app-shell"
+    data-tauri-drag-region
+    @pointerdown="onDragPointerDown"
+  >
+    <div class="progress drag" data-tauri-drag-region aria-hidden="true">
       <div class="progress-fill" :style="{ width: progress + '%' }" />
     </div>
 
-    <div class="body">
-      <div class="cover">
+    <div class="body drag" data-tauri-drag-region>
+      <div class="cover drag" data-tauri-drag-region>
         <img
           v-if="state?.track?.picUrl"
           :src="state.track.picUrl"
           alt=""
           referrerpolicy="no-referrer"
+          draggable="false"
         />
         <Icon v-else name="ri:music-2-line" :size="20" />
       </div>
 
-      <div class="meta" data-tauri-drag-region>
-        <div class="name truncate">{{ state?.track?.name || "未播放" }}</div>
-        <div class="artist truncate">{{ artist }}</div>
-        <div class="time">
+      <div class="meta drag" data-tauri-drag-region>
+        <div class="name truncate" data-tauri-drag-region>
+          {{ state?.track?.name || "未播放" }}
+        </div>
+        <div class="artist truncate" data-tauri-drag-region>{{ artist }}</div>
+        <div class="time" data-tauri-drag-region>
           {{ formatTime(state?.currentTime || 0) }}
           <span class="slash">/</span>
           {{ formatTime(state?.duration || 0) }}
         </div>
       </div>
 
-      <div class="controls no-drag">
+      <div class="controls no-drag" @pointerdown.stop>
         <button type="button" class="btn" title="上一首" @click="emitCmd('prev')">
           <Icon name="ri:skip-back-fill" :size="16" />
         </button>
@@ -133,6 +153,17 @@ onUnmounted(() => {
   border: 1px solid var(--border);
   overflow: hidden;
   user-select: none;
+  cursor: grab;
+}
+
+.mini:active {
+  cursor: grabbing;
+}
+
+/* Tauri 拖拽区（属性 + CSS 双保险） */
+.drag {
+  -webkit-app-region: drag;
+  app-region: drag;
 }
 
 .progress {
@@ -218,8 +249,9 @@ onUnmounted(() => {
 }
 
 .no-drag {
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
+  -webkit-app-region: no-drag !important;
+  app-region: no-drag !important;
+  cursor: default;
 }
 
 .btn {
@@ -233,6 +265,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  -webkit-app-region: no-drag !important;
+  app-region: no-drag !important;
   transition:
     color 0.12s,
     background 0.12s;
