@@ -1,4 +1,5 @@
 import type { SkinDefinition, SkinId } from "./types";
+import { activeSkin } from "./activeSkin";
 
 export const DEFAULT_SKIN_ID: SkinId = "obsidian";
 
@@ -18,6 +19,12 @@ const LEGACY_SKIN_MAP: Record<string, SkinId> = {
   "nordic-snow": "porcelain",
   "peach-sunset": "cinnabar",
   "matcha-latte": "paper",
+  // 已下架的图片/视频皮肤 → 回退到相近默认
+  "moss-forest": "obsidian",
+  "sage-mist": "porcelain",
+  "cloud-tea": "paper",
+  "lavender-haze": "porcelain",
+  "aurora-flow": "misty-lake",
 };
 
 function darkTokens(partial: Partial<SkinDefinition["tokens"]> & Pick<
@@ -364,208 +371,12 @@ export const SKINS: SkinDefinition[] = [
     },
   },
   {
-    id: "moss-forest",
-    name: "青苔森野",
-    description: "青绿一体氛围 · 圆角毛玻璃导航",
-    mode: "dark",
-    layout: "desktop",
-    preview: ["#1a2e24", "#3d8f6a", "#243d32"],
-    wallpaper: {
-      type: "image",
-      src: "/skins/moss-forest/bg.jpg",
-      fallback:
-        "linear-gradient(155deg, #152820 0%, #1e332a 50%, #13241c 100%)",
-    },
-    overlay: "none",
-    tokens: darkTokens({
-      bg: "#1a2e24",
-      "sider-bg": "rgba(255,255,255,0.1)",
-      "bar-bg": "rgba(10,18,14,0.22)",
-      surface: "rgba(255,255,255,0.06)",
-      "surface-2": "rgba(255,255,255,0.11)",
-      primary: "#4eab80",
-      "primary-hover": "#5fc492",
-      "primary-pressed": "#3d8f6a",
-      "primary-soft": "rgba(78,171,128,0.2)",
-      "accent-secondary": "#7bc4a0",
-      "panel-blur": "20px",
-      border: "rgba(255,255,255,0.1)",
-      "border-strong": "rgba(255,255,255,0.16)",
-      "radius-md": "12px",
-      "radius-lg": "14px",
-    }),
-    naiveOverrides: {
-      common: {
-        primaryColor: "#4eab80",
-        primaryColorHover: "#5fc492",
-        primaryColorPressed: "#3d8f6a",
-        primaryColorSuppl: "#4eab80",
-        bodyColor: "#1a2e24",
-        cardColor: "#1e332a",
-        modalColor: "#1e332a",
-        popoverColor: "#243d32",
-        borderColor: "rgba(255,255,255,0.1)",
-        borderRadius: "12px",
-      },
-    },
-  },
-  {
-    id: "sage-mist",
-    name: "雾纱绿",
-    description: "护眼鼠尾草绿雾 · 柔和清晰背景图",
-    mode: "light",
-    layout: "desktop",
-    preview: ["#d8e6d4", "#5a8f6a", "#eef5ec"],
-    wallpaper: {
-      type: "image",
-      src: "/skins/sage-mist/bg.jpg",
-      fallback:
-        "linear-gradient(155deg, #d4e4d0 0%, #e2eee0 48%, #cfdccb 100%)",
-    },
-    overlay:
-      "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 42%, rgba(220,235,220,0.18) 100%)",
-    tokens: lightTokens({
-      bg: "#dce8d8",
-      "sider-bg": "rgba(255,255,255,0.48)",
-      "bar-bg": "rgba(250,255,250,0.22)",
-      surface: "rgba(255,255,255,0.32)",
-      "surface-2": "rgba(255,255,255,0.44)",
-      primary: "#4f8a62",
-      "primary-hover": "#5c9b70",
-      "primary-pressed": "#3f7250",
-      "primary-soft": "rgba(79,138,98,0.14)",
-      "accent-secondary": "#7aaf8a",
-      "panel-blur": "20px",
-      text: "rgba(32,48,36,0.92)",
-      "text-muted": "rgba(32,48,36,0.58)",
-      "text-faint": "rgba(32,48,36,0.4)",
-      border: "rgba(255,255,255,0.5)",
-      "border-strong": "rgba(60,100,70,0.16)",
-      "radius-md": "12px",
-      "radius-lg": "14px",
-    }),
-    naiveOverrides: {
-      common: {
-        primaryColor: "#4f8a62",
-        primaryColorHover: "#5c9b70",
-        primaryColorPressed: "#3f7250",
-        primaryColorSuppl: "#4f8a62",
-        bodyColor: "#dce8d8",
-        cardColor: "rgba(248,252,248,0.92)",
-        modalColor: "#f4faf4",
-        popoverColor: "#ffffff",
-        borderColor: "rgba(60,100,70,0.12)",
-        borderRadius: "12px",
-      },
-    },
-  },
-  {
-    id: "cloud-tea",
-    name: "云雾茶",
-    description: "暖茶米白护眼 · 低眩光清晰壁纸",
-    mode: "light",
-    layout: "desktop",
-    preview: ["#ebe4d4", "#8a9a6a", "#f7f3ea"],
-    wallpaper: {
-      type: "image",
-      src: "/skins/cloud-tea/bg.jpg",
-      fallback:
-        "linear-gradient(160deg, #ebe6d8 0%, #f0ebe0 50%, #e4dfd0 100%)",
-    },
-    overlay:
-      "linear-gradient(180deg, rgba(255,252,246,0.28) 0%, transparent 40%, rgba(236,230,214,0.2) 100%)",
-    tokens: lightTokens({
-      bg: "#ebe6d8",
-      "sider-bg": "rgba(255,255,255,0.5)",
-      "bar-bg": "rgba(255,252,246,0.22)",
-      surface: "rgba(255,255,255,0.34)",
-      "surface-2": "rgba(255,255,255,0.46)",
-      primary: "#7d8f5c",
-      "primary-hover": "#8fa36a",
-      "primary-pressed": "#667549",
-      "primary-soft": "rgba(125,143,92,0.14)",
-      "accent-secondary": "#a3b07a",
-      "panel-blur": "20px",
-      text: "rgba(48,44,32,0.92)",
-      "text-muted": "rgba(48,44,32,0.58)",
-      "text-faint": "rgba(48,44,32,0.4)",
-      border: "rgba(255,255,255,0.52)",
-      "border-strong": "rgba(100,90,60,0.16)",
-      "radius-md": "12px",
-      "radius-lg": "14px",
-    }),
-    naiveOverrides: {
-      common: {
-        primaryColor: "#7d8f5c",
-        primaryColorHover: "#8fa36a",
-        primaryColorPressed: "#667549",
-        primaryColorSuppl: "#7d8f5c",
-        bodyColor: "#ebe6d8",
-        cardColor: "rgba(252,250,244,0.92)",
-        modalColor: "#faf7f0",
-        popoverColor: "#ffffff",
-        borderColor: "rgba(100,90,60,0.12)",
-        borderRadius: "12px",
-      },
-    },
-  },
-  {
-    id: "lavender-haze",
-    name: "岚紫雾",
-    description: "淡紫雾蓝护眼 · 柔光清晰背景图",
-    mode: "light",
-    layout: "desktop",
-    preview: ["#e4e2f0", "#7b6fb0", "#f2f0f8"],
-    wallpaper: {
-      type: "image",
-      src: "/skins/lavender-haze/bg.jpg",
-      fallback:
-        "linear-gradient(155deg, #ddd8ef 0%, #e8e6f4 48%, #d5d8ec 100%)",
-    },
-    overlay:
-      "linear-gradient(180deg, rgba(255,255,255,0.26) 0%, transparent 42%, rgba(230,228,245,0.18) 100%)",
-    tokens: lightTokens({
-      bg: "#e2e0ef",
-      "sider-bg": "rgba(255,255,255,0.5)",
-      "bar-bg": "rgba(250,248,255,0.22)",
-      surface: "rgba(255,255,255,0.34)",
-      "surface-2": "rgba(255,255,255,0.46)",
-      primary: "#6f63a8",
-      "primary-hover": "#8174b8",
-      "primary-pressed": "#5a508c",
-      "primary-soft": "rgba(111,99,168,0.14)",
-      "accent-secondary": "#9a90c4",
-      "panel-blur": "20px",
-      text: "rgba(36,32,52,0.92)",
-      "text-muted": "rgba(36,32,52,0.58)",
-      "text-faint": "rgba(36,32,52,0.4)",
-      border: "rgba(255,255,255,0.52)",
-      "border-strong": "rgba(80,70,130,0.16)",
-      "radius-md": "12px",
-      "radius-lg": "14px",
-    }),
-    naiveOverrides: {
-      common: {
-        primaryColor: "#6f63a8",
-        primaryColorHover: "#8174b8",
-        primaryColorPressed: "#5a508c",
-        primaryColorSuppl: "#6f63a8",
-        bodyColor: "#e2e0ef",
-        cardColor: "rgba(250,248,255,0.92)",
-        modalColor: "#f6f4fc",
-        popoverColor: "#ffffff",
-        borderColor: "rgba(80,70,130,0.12)",
-        borderRadius: "12px",
-      },
-    },
-  },
-  {
     id: "misty-lake",
     name: "岚湖夜",
-    description: "夜间低刺激青蓝 · 湖雾背景图护眼",
+    description: "月夜星湖倒影 · 低刺激护眼壁纸",
     mode: "dark",
     layout: "desktop",
-    preview: ["#152428", "#5aa8b8", "#1c3036"],
+    preview: ["#0c1a28", "#5aa8b8", "#163040"],
     wallpaper: {
       type: "image",
       src: "/skins/misty-lake/bg.jpg",
@@ -609,6 +420,56 @@ export const SKINS: SkinDefinition[] = [
       },
     },
   },
+  {
+    id: "cloud-drift",
+    name: "云海漫游",
+    description: "晴空云层静图 · 清爽浅蓝壁纸",
+    mode: "light",
+    layout: "desktop",
+    preview: ["#d8e8f6", "#3b82c4", "#eef5fc"],
+    wallpaper: {
+      type: "image",
+      src: "/skins/cloud-drift/bg.jpg",
+      fallback:
+        "linear-gradient(165deg, #c8ddf0 0%, #e4eef8 48%, #d2e4f4 100%)",
+    },
+    overlay:
+      "linear-gradient(180deg, rgba(255,255,255,0.28) 0%, transparent 42%, rgba(210,230,245,0.2) 100%)",
+    tokens: lightTokens({
+      bg: "#d8e8f6",
+      "sider-bg": "rgba(255,255,255,0.5)",
+      "bar-bg": "rgba(250,252,255,0.24)",
+      surface: "rgba(255,255,255,0.36)",
+      "surface-2": "rgba(255,255,255,0.48)",
+      primary: "#3b82c4",
+      "primary-hover": "#4f94d4",
+      "primary-pressed": "#2f6aa3",
+      "primary-soft": "rgba(59,130,196,0.14)",
+      "accent-secondary": "#7eb6e0",
+      "panel-blur": "20px",
+      text: "rgba(24,36,52,0.92)",
+      "text-muted": "rgba(24,36,52,0.58)",
+      "text-faint": "rgba(24,36,52,0.4)",
+      border: "rgba(255,255,255,0.55)",
+      "border-strong": "rgba(50,90,130,0.16)",
+      "radius-md": "12px",
+      "radius-lg": "14px",
+    }),
+    naiveOverrides: {
+      common: {
+        primaryColor: "#3b82c4",
+        primaryColorHover: "#4f94d4",
+        primaryColorPressed: "#2f6aa3",
+        primaryColorSuppl: "#3b82c4",
+        bodyColor: "#d8e8f6",
+        cardColor: "rgba(248,252,255,0.92)",
+        modalColor: "#f4f9fd",
+        popoverColor: "#ffffff",
+        borderColor: "rgba(50,90,130,0.12)",
+        borderRadius: "12px",
+      },
+    },
+  },
 ];
 
 export function resolveSkinId(id?: string | null): SkinId {
@@ -645,13 +506,35 @@ export function applySkinToDocument(skin: SkinDefinition) {
   if (skin.wallpaper.type === "css") {
     root.style.setProperty("--wallpaper", skin.wallpaper.value);
     root.style.removeProperty("--wallpaper-image");
-  } else {
+    root.style.removeProperty("--wallpaper-video");
+    root.style.removeProperty("--wallpaper-poster");
+  } else if (skin.wallpaper.type === "image") {
     const fallback = skin.wallpaper.fallback ?? skin.tokens.bg;
     root.style.setProperty("--wallpaper", fallback);
     root.style.setProperty(
       "--wallpaper-image",
       `url("${skin.wallpaper.src}")`,
     );
+    root.style.removeProperty("--wallpaper-video");
+    root.style.removeProperty("--wallpaper-poster");
+  } else {
+    // video：CSS 层用 poster/fallback 兜底，真实视频由 WallpaperLayer 播放
+    const fallback = skin.wallpaper.fallback ?? skin.tokens.bg;
+    root.style.setProperty("--wallpaper", fallback);
+    if (skin.wallpaper.poster) {
+      root.style.setProperty(
+        "--wallpaper-image",
+        `url("${skin.wallpaper.poster}")`,
+      );
+      root.style.setProperty(
+        "--wallpaper-poster",
+        `url("${skin.wallpaper.poster}")`,
+      );
+    } else {
+      root.style.removeProperty("--wallpaper-image");
+      root.style.removeProperty("--wallpaper-poster");
+    }
+    root.style.setProperty("--wallpaper-video", skin.wallpaper.src);
   }
 
   if (skin.overlay) {
@@ -661,4 +544,5 @@ export function applySkinToDocument(skin: SkinDefinition) {
   }
 
   root.style.colorScheme = skin.mode;
+  activeSkin.value = skin;
 }

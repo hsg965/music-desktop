@@ -26,6 +26,7 @@ import { useUpdater } from "../composables/useUpdater";
 import { clearAudioCache, getAudioCacheStats } from "../utils/audioCache";
 import { applySkin, getSkin } from "../themes/apply";
 import Icon from "../components/Icon.vue";
+import WallpaperLayer from "../components/WallpaperLayer.vue";
 import UpdateDialog from "../components/UpdateDialog.vue";
 
 type SectionId =
@@ -174,6 +175,7 @@ onUnmounted(() => {
 <template>
   <NMessageProvider>
     <div class="settings-win app-shell">
+      <WallpaperLayer />
       <header class="titlebar skin-title-seamless" data-tauri-drag-region>
         <div class="titlebar-left" data-tauri-drag-region>
           <Icon name="ri:settings-3-fill" :size="16" color="var(--primary)" />

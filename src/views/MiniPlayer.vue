@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import type { PlayerSnapshot } from "../types/music";
 import Icon from "../components/Icon.vue";
+import WallpaperLayer from "../components/WallpaperLayer.vue";
 import { applySkin } from "../themes/apply";
 import { formatTime } from "../utils/lrc";
 
@@ -87,6 +88,7 @@ onUnmounted(() => {
     data-tauri-drag-region
     @pointerdown="onDragPointerDown"
   >
+    <WallpaperLayer />
     <div class="progress drag" data-tauri-drag-region aria-hidden="true">
       <div class="progress-fill" :style="{ width: progress + '%' }" />
     </div>

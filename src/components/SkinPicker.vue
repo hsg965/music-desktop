@@ -13,6 +13,18 @@ function previewStyle(skin: SkinDefinition): Record<string, string> {
       backgroundPosition: "center",
     };
   }
+  if (skin.wallpaper.type === "video") {
+    if (skin.wallpaper.poster) {
+      return {
+        backgroundImage: `url("${skin.wallpaper.poster}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      };
+    }
+    return {
+      background: skin.wallpaper.fallback || skin.tokens.bg,
+    };
+  }
   return {
     background: skin.wallpaper.value,
   };
@@ -42,6 +54,7 @@ function select(id: SkinId) {
         >
           {{ skin.mode === "light" ? "浅色" : "深色" }}
         </span>
+        <span v-if="skin.wallpaper.type === 'video'" class="skin-live">动态</span>
       </div>
       <div class="skin-meta">
         <div class="skin-name">{{ skin.name }}</div>
@@ -116,6 +129,19 @@ function select(id: SkinId) {
 .skin-mode.is-light {
   background: rgba(255, 255, 255, 0.75);
   color: #333;
+}
+
+.skin-live {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 85%, #000);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .skin-meta {

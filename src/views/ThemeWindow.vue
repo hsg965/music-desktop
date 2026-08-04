@@ -5,6 +5,7 @@ import { SKINS } from "../themes/registry";
 import type { SkinDefinition, SkinId, SkinMode } from "../themes/types";
 import { useSettingsStore } from "../stores/settings";
 import Icon from "../components/Icon.vue";
+import WallpaperLayer from "../components/WallpaperLayer.vue";
 import { applySkin } from "../themes/apply";
 
 const settings = useSettingsStore();
@@ -24,6 +25,19 @@ function previewStyle(skin: SkinDefinition): Record<string, string> {
       backgroundImage: `url("${skin.wallpaper.src}")`,
       backgroundSize: "cover",
       backgroundPosition: "center",
+    };
+  }
+  if (skin.wallpaper.type === "video") {
+    const poster = skin.wallpaper.poster;
+    if (poster) {
+      return {
+        backgroundImage: `url("${poster}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      };
+    }
+    return {
+      background: skin.wallpaper.fallback || skin.tokens.bg,
     };
   }
   return {
@@ -53,6 +67,7 @@ onMounted(() => {
 
 <template>
   <div class="theme-win app-shell">
+    <WallpaperLayer />
     <header class="top skin-title-seamless" data-tauri-drag-region>
       <div class="title" data-tauri-drag-region>
         <Icon name="ri:palette-fill" :size="18" color="var(--primary)" />
@@ -94,6 +109,12 @@ onMounted(() => {
               :class="skin.mode === 'light' ? 'is-light' : 'is-dark'"
             >
               {{ skin.mode === "light" ? "亮色" : "深色" }}
+            </span>
+            <span
+              v-if="skin.wallpaper.type === 'video'"
+              class="skin-live"
+            >
+              动态
             </span>
             <span v-if="settings.skinId === skin.id" class="check">
               <Icon name="ri:check-line" :size="14" />
@@ -256,6 +277,18 @@ onMounted(() => {
 .skin-mode.is-light {
   background: rgba(255, 255, 255, 0.82);
   color: #333;
+}
+
+.skin-live {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 88%, #000);
+  color: #fff;
+  font-weight: 600;
 }
 
 .check {

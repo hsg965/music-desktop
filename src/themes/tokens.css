@@ -75,6 +75,20 @@
   z-index: 1;
 }
 
+/* 视频壁纸层：压在内容下、与 ::before/::after 同层叠上下文 */
+.app-shell > .skin-wallpaper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 视频就绪后减弱静态 poster，避免双层糊叠（仍保留作解码前兜底） */
+html[data-wallpaper="video"] .app-shell::before {
+  opacity: 0.55;
+  transition: opacity 0.35s ease;
+}
+
 /* 标题栏：整窗一体，无条带感（参考 QQ 音乐） */
 .title-bar {
   height: var(--titlebar-height);

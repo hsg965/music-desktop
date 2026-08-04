@@ -9,6 +9,7 @@ import SearchPanel from "../components/SearchPanel.vue";
 import AlbumPanel from "../components/AlbumPanel.vue";
 import QueuePanel from "../components/QueuePanel.vue";
 import FavoritesPanel from "../components/FavoritesPanel.vue";
+import WallpaperLayer from "../components/WallpaperLayer.vue";
 import DownloadModal from "../components/DownloadModal.vue";
 import DownloadPanel from "../components/DownloadPanel.vue";
 import UpdateDialog from "../components/UpdateDialog.vue";
@@ -102,6 +103,7 @@ onUnmounted(() => {
   <NDialogProvider>
     <NMessageProvider>
       <div class="app-shell h-screen flex flex-col overflow-hidden">
+        <WallpaperLayer />
         <TitleBar />
 
         <div class="workspace">

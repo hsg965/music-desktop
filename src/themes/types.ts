@@ -9,21 +9,27 @@ export type SkinId =
   | "porcelain"
   | "paper"
   | "honey-pop"
-  | "moss-forest"
-  | "sage-mist"
-  | "cloud-tea"
-  | "lavender-haze"
-  | "misty-lake";
+  | "misty-lake"
+  | "cloud-drift";
 
 /** 统一桌面壳布局；皮肤只改色与壁纸，不改结构 */
 export type LayoutId = "desktop";
 
 export type SkinMode = "dark" | "light";
 
-/** 壁纸：CSS background 值，或 public 下图片 */
+/** 壁纸：CSS 渐变、静态图，或循环视频 */
 export type SkinWallpaper =
   | { type: "css"; value: string }
-  | { type: "image"; src: string; fallback?: string };
+  | { type: "image"; src: string; fallback?: string }
+  | {
+      type: "video";
+      /** public 下视频路径，如 /skins/aurora-flow/bg.mp4 */
+      src: string;
+      /** 选肤预览 / 加载前海报，建议同场景静图 */
+      poster?: string;
+      /** 视频失败或省电时的 CSS background 兜底 */
+      fallback?: string;
+    };
 
 /** CSS 变量键（不含 -- 前缀） */
 export type TokenKey =
