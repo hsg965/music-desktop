@@ -28,17 +28,151 @@ const TTL = {
   playlist: 30 * 60 * 1000,
 };
 
-/** 网易云官方热榜 */
+/**
+ * 精选官方榜（从 toplist 全量里筛过）
+ * 原则：好选、好用、少营销/车友/VIP/细分噪音
+ */
 export const CHART_LIST: ChartInfo[] = [
-  { id: "19723756", name: "飙升榜" },
-  { id: "3779629", name: "新歌榜" },
-  { id: "3778678", name: "热歌榜" },
-  { id: "71384707", name: "古典榜" },
-  { id: "1978921795", name: "电音榜" },
-  { id: "71385702", name: "ACG榜" },
-  { id: "2809513713", name: "欧美热歌榜" },
-  { id: "5059644681", name: "日语榜" },
-  { id: "745956260", name: "韩语榜" },
+  // —— 热门：不知道听什么时优先看这里 ——
+  {
+    id: "19723756",
+    name: "飙升榜",
+    group: "featured",
+    blurb: "正在变火",
+    accent: "#e11d48",
+  },
+  {
+    id: "3779629",
+    name: "新歌榜",
+    group: "featured",
+    blurb: "新鲜首发",
+    accent: "#2563eb",
+  },
+  {
+    id: "3778678",
+    name: "热歌榜",
+    group: "featured",
+    blurb: "全站最热",
+    accent: "#ea580c",
+  },
+  {
+    id: "2884035",
+    name: "原创榜",
+    group: "featured",
+    blurb: "华语原创",
+    accent: "#7c3aed",
+  },
+
+  // —— 风格 / 语种 / 全球 ——
+  {
+    id: "991319590",
+    name: "说唱榜",
+    group: "global",
+    blurb: "中文说唱",
+    accent: "#0f766e",
+  },
+  {
+    id: "1978921795",
+    name: "电音榜",
+    group: "global",
+    blurb: "电子音乐",
+    accent: "#7c3aed",
+  },
+  {
+    id: "71384707",
+    name: "ACG 榜",
+    group: "global",
+    blurb: "二次元",
+    accent: "#db2777",
+  },
+  {
+    id: "5059633707",
+    name: "民谣榜",
+    group: "global",
+    blurb: "民谣精选",
+    accent: "#65a30d",
+  },
+  {
+    id: "10520166",
+    name: "摇滚榜",
+    group: "global",
+    blurb: "摇滚精选",
+    accent: "#b91c1c",
+  },
+  {
+    id: "5059644681",
+    name: "国风榜",
+    group: "global",
+    blurb: "古风国风",
+    accent: "#b45309",
+  },
+  {
+    id: "71385702",
+    name: "古典榜",
+    group: "global",
+    blurb: "古典音乐",
+    accent: "#a16207",
+  },
+  {
+    id: "2809513713",
+    name: "欧美热歌",
+    group: "global",
+    blurb: "Western hits",
+    accent: "#1d4ed8",
+  },
+  {
+    id: "745956260",
+    name: "韩语榜",
+    group: "global",
+    blurb: "K-Pop",
+    accent: "#c026d3",
+  },
+  {
+    id: "6077928",
+    name: "日语榜",
+    group: "global",
+    blurb: "J-Pop",
+    accent: "#e11d48",
+  },
+  {
+    id: "60198",
+    name: "Billboard",
+    group: "global",
+    blurb: "美国流行",
+    accent: "#111827",
+  },
+  {
+    id: "180106",
+    name: "UK 榜",
+    group: "global",
+    blurb: "英国周榜",
+    accent: "#1e3a8a",
+  },
+  {
+    id: "60131",
+    name: "Oricon",
+    group: "global",
+    blurb: "日本公信榜",
+    accent: "#9f1239",
+  },
+];
+
+/** 侧栏分区 */
+export const CHART_GROUPS: {
+  key: ChartInfo["group"];
+  label: string;
+  desc: string;
+}[] = [
+  {
+    key: "featured",
+    label: "热门",
+    desc: "飙升 · 新歌 · 热歌 · 原创",
+  },
+  {
+    key: "global",
+    label: "风格与全球",
+    desc: "说唱 · ACG · Billboard 等",
+  },
 ];
 
 /** CRC32（大写 8 位 hex），用于 playlist 接口 s 参数 */

@@ -47,7 +47,7 @@ const isCollectionRoute = computed(
 );
 
 const browseItems: NavItem[] = [
-  { key: "charts", label: "热榜", icon: "ri:fire-fill" },
+  { key: "charts", label: "发现", icon: "ri:compass-3-fill" },
   { key: "search", label: "搜索", icon: "ri:search-line" },
 ];
 

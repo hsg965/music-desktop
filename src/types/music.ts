@@ -44,10 +44,22 @@ export interface LyricResult {
   tlyric?: string;
 }
 
-/** 官方热榜配置 */
+/**
+ * 发现页分区（对齐 music.163.com/#/discover/toplist）
+ * featured = 云音乐特色榜；global = 全球媒体榜
+ */
+export type ChartGroup = "featured" | "global";
+
+/** 官方热榜 / 发现页歌单配置 */
 export interface ChartInfo {
   id: string;
   name: string;
+  /** 发现页分区 */
+  group: ChartGroup;
+  /** 卡片副文案（更新节奏等） */
+  blurb?: string;
+  /** 卡片强调色（无封面时的渐变） */
+  accent?: string;
 }
 
 /** 歌单 / 热榜详情（归一化后） */

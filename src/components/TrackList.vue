@@ -71,7 +71,8 @@ function onAlbumClick(track: Track, e: Event) {
 }
 
 const ROW_H = 52;
-const OVERSCAN = 8;
+/** 可视区外多渲几行；略小可降低切换时首帧成本 */
+const OVERSCAN = 4;
 /** 距底部多少 px 触发加载更多 */
 const LOAD_MORE_OFFSET = 120;
 
@@ -109,8 +110,9 @@ watch(
   { immediate: true },
 );
 
+/** 超过约一屏就虚拟化，避免榜单 100 首整表 DOM */
 const useVirtual = computed(
-  () => props.virtual !== false && list.value.length > 40,
+  () => props.virtual !== false && list.value.length > 12,
 );
 
 const totalH = computed(() => list.value.length * ROW_H);
@@ -371,7 +373,10 @@ watch(
   padding-bottom: 8px;
 }
 
-/* 表头：半透明雾面底，遮住滚动重叠，又不显死白条 */
+/*
+ * 表头：轻标签行 + 软渐隐底
+ * 避免 sticky 时整块雾面条硬贴在列表上；底缘渐隐盖住上滚行，而不是矩形实条
+ */
 .track-head {
   position: sticky;
   top: 0;
@@ -380,18 +385,55 @@ watch(
   grid-template-columns: 40px minmax(0, 1.4fr) minmax(0, 1fr) 140px;
   gap: 8px;
   align-items: center;
-  padding: 6px 10px 8px;
-  margin-bottom: 2px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 35%, transparent);
-  background: color-mix(in srgb, var(--bg) 78%, transparent);
-  backdrop-filter: blur(14px) saturate(var(--glass-saturate, 1.3));
-  -webkit-backdrop-filter: blur(14px) saturate(var(--glass-saturate, 1.3));
+  padding: 2px 10px 10px;
+  margin-bottom: 0;
+  border-bottom: none;
+  background: transparent;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.01em;
   text-transform: none;
-  color: var(--text-faint);
+  color: var(--text-muted);
   user-select: none;
+}
+
+/* 软遮罩层：顶部略糊、向下淡出，不形成独立色块 */
+.track-head::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: -10px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg) 58%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 32%, transparent) 52%,
+    color-mix(in srgb, var(--bg) 0%, transparent) 100%
+  );
+  backdrop-filter: blur(10px) saturate(var(--glass-saturate, 1.3));
+  -webkit-backdrop-filter: blur(10px) saturate(var(--glass-saturate, 1.3));
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 48%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(180deg, #000 0%, #000 48%, transparent 100%);
+}
+
+/* 内缩细线：分隔列标签与内容，不拉满成硬切割 */
+.track-head::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 4px;
+  height: 1px;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--border) 42%, transparent);
 }
 
 .track-row {
@@ -420,7 +462,19 @@ watch(
 .track-head.compact,
 .track-row.compact {
   grid-template-columns: 36px minmax(0, 1fr) 128px;
+}
+
+.track-head.compact {
+  padding: 2px 8px 10px;
+}
+
+.track-row.compact {
   padding: 0 8px;
+}
+
+.track-head.compact::after {
+  left: 8px;
+  right: 8px;
 }
 
 .track-head.compact .col-album,
