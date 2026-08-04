@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { useMessage } from "naive-ui";
 import type { Track } from "../types/music";
 import Icon from "./Icon.vue";
+import { useFavoritesStore } from "../stores/favorites";
 
 const props = withDefaults(
   defineProps<{
@@ -21,6 +23,8 @@ const props = withDefaults(
     loadingMore?: boolean;
     /** 上一页加载失败或空数据（限流等） */
     loadError?: boolean;
+    /** 显示收藏红心（默认开） */
+    likeable?: boolean;
   }>(),
   {
     showIndex: true,
@@ -31,6 +35,7 @@ const props = withDefaults(
     infinite: false,
     loadingMore: false,
     loadError: false,
+    likeable: true,
   },
 );
 
@@ -43,6 +48,15 @@ const emit = defineEmits<{
   /** 接近底部时触发，父级应加载下一页 */
   loadMore: [];
 }>();
+
+const favorites = useFavoritesStore();
+const message = useMessage();
+
+function onToggleLike(track: Track, e: Event) {
+  e.stopPropagation();
+  const liked = favorites.toggle(track);
+  message.success(liked ? "已添加到我喜欢的音乐" : "已取消喜欢");
+}
 
 function canOpenAlbum(t: Track) {
   if (!props.albumLink) return false;
@@ -265,6 +279,21 @@ watch(
 
         <div class="col-actions">
           <button
+            v-if="likeable"
+            type="button"
+            class="act-btn like-btn"
+            :class="{ liked: favorites.isLiked(track) }"
+            :title="favorites.isLiked(track) ? '取消喜欢' : '我喜欢'"
+            @click="onToggleLike(track, $event)"
+          >
+            <Icon
+              :name="
+                favorites.isLiked(track) ? 'ri:heart-3-fill' : 'ri:heart-3-line'
+              "
+              :size="15"
+            />
+          </button>
+          <button
             type="button"
             class="act-btn"
             title="播放"
@@ -348,7 +377,7 @@ watch(
   top: 0;
   z-index: 2;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1.4fr) minmax(0, 1fr) 108px;
+  grid-template-columns: 40px minmax(0, 1.4fr) minmax(0, 1fr) 140px;
   gap: 8px;
   align-items: center;
   padding: 6px 10px 8px;
@@ -367,7 +396,7 @@ watch(
 
 .track-row {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1.4fr) minmax(0, 1fr) 108px;
+  grid-template-columns: 40px minmax(0, 1.4fr) minmax(0, 1fr) 140px;
   gap: 8px;
   align-items: center;
   padding: 0 10px;
@@ -390,7 +419,7 @@ watch(
 /* 紧凑模式：隐藏专辑列，适配弹层等小尺寸场景 */
 .track-head.compact,
 .track-row.compact {
-  grid-template-columns: 36px minmax(0, 1fr) 96px;
+  grid-template-columns: 36px minmax(0, 1fr) 128px;
   padding: 0 8px;
 }
 
@@ -508,12 +537,6 @@ watch(
   align-items: center;
   justify-content: flex-end;
   gap: 2px;
-  opacity: 0;
-}
-
-.track-row:hover .col-actions,
-.track-row.active .col-actions {
-  opacity: 1;
 }
 
 .act-btn {
@@ -528,11 +551,28 @@ watch(
   color: var(--text-muted);
   cursor: pointer;
   padding: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.track-row:hover .act-btn,
+.track-row.active .act-btn,
+.act-btn.like-btn.liked {
+  opacity: 1;
 }
 
 .act-btn:hover {
   color: var(--text);
   background: var(--surface);
+}
+
+.like-btn.liked {
+  color: var(--primary);
+}
+
+.like-btn.liked:hover {
+  color: var(--primary-hover, var(--primary));
+  background: var(--primary-soft);
 }
 
 .pad {

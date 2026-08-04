@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { NMessageProvider } from "naive-ui";
+import { NDialogProvider, NMessageProvider } from "naive-ui";
 import TitleBar from "../components/TitleBar.vue";
 import PlayerBar from "../components/PlayerBar.vue";
 import ChartsPanel from "../components/ChartsPanel.vue";
 import SearchPanel from "../components/SearchPanel.vue";
 import AlbumPanel from "../components/AlbumPanel.vue";
 import QueuePanel from "../components/QueuePanel.vue";
+import FavoritesPanel from "../components/FavoritesPanel.vue";
 import DownloadModal from "../components/DownloadModal.vue";
 import DownloadPanel from "../components/DownloadPanel.vue";
 import UpdateDialog from "../components/UpdateDialog.vue";
@@ -15,12 +16,13 @@ import ImmersiveLyric from "../components/ImmersiveLyric.vue";
 import Icon from "../components/Icon.vue";
 import { usePlayerStore } from "../stores/player";
 import { useDownloadStore } from "../stores/download";
+import { useFavoritesStore } from "../stores/favorites";
 import { provideDownloadModal } from "../composables/useDownloadModal";
 import { useUpdater } from "../composables/useUpdater";
 import { useImmersiveLyric } from "../composables/useImmersiveLyric";
 import { openSettingsWindow } from "../utils/windows";
 
-type NavKey = "charts" | "search" | "queue" | "download";
+type NavKey = "charts" | "search" | "favorites" | "queue" | "download";
 
 interface NavItem {
   key: NavKey;
@@ -32,6 +34,7 @@ const route = useRoute();
 const router = useRouter();
 const player = usePlayerStore();
 const downloadStore = useDownloadStore();
+const favorites = useFavoritesStore();
 const { scheduleSilentCheck } = useUpdater();
 const { open: lyricOpen, hide: hideLyric } = useImmersiveLyric();
 const active = ref<NavKey>("charts");
@@ -48,6 +51,11 @@ const browseItems: NavItem[] = [
 ];
 
 const libraryItems = computed<NavItem[]>(() => [
+  {
+    key: "favorites",
+    label: "我喜欢的音乐",
+    icon: "ri:heart-3-fill",
+  },
   { key: "queue", label: "播放队列", icon: "ri:play-list-2-line" },
   { key: "download", label: "下载", icon: "ri:download-2-line" },
 ]);
@@ -91,91 +99,105 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <NMessageProvider>
-    <div class="app-shell h-screen flex flex-col overflow-hidden">
-      <TitleBar />
+  <NDialogProvider>
+    <NMessageProvider>
+      <div class="app-shell h-screen flex flex-col overflow-hidden">
+        <TitleBar />
 
-      <div class="workspace">
-        <nav class="app-nav" aria-label="主导航">
-          <div class="app-nav-brand">
-            <Icon name="ri:music-2-fill" :size="22" color="var(--primary)" />
-            <span class="app-nav-brand-title">Music Desktop</span>
-          </div>
+        <div class="workspace">
+          <nav class="app-nav" aria-label="主导航">
+            <div class="app-nav-brand">
+              <Icon name="ri:music-2-fill" :size="22" color="var(--primary)" />
+              <span class="app-nav-brand-title">Music Desktop</span>
+            </div>
 
-          <div class="app-nav-section">浏览</div>
-          <button
-            v-for="item in browseItems"
-            :key="item.key"
-            type="button"
-            class="app-nav-item"
-            :class="{ active: active === item.key && !lyricOpen }"
-            @click="goNav(item.key)"
-          >
-            <span class="nav-icon">
-              <Icon :name="item.icon" :size="18" />
-            </span>
-            <span>{{ item.label }}</span>
-          </button>
-
-          <div class="app-nav-section">音乐库</div>
-          <button
-            v-for="item in libraryItems"
-            :key="item.key"
-            type="button"
-            class="app-nav-item"
-            :class="{ active: active === item.key && !lyricOpen }"
-            @click="goNav(item.key)"
-          >
-            <span class="nav-icon">
-              <Icon :name="item.icon" :size="18" />
-            </span>
-            <span>{{ item.label }}</span>
-            <span
-              v-if="item.key === 'download' && downloadStore.activeCount"
-              class="app-nav-badge"
+            <div class="app-nav-section">浏览</div>
+            <button
+              v-for="item in browseItems"
+              :key="item.key"
+              type="button"
+              class="app-nav-item"
+              :class="{ active: active === item.key && !lyricOpen }"
+              @click="goNav(item.key)"
             >
-              {{ downloadStore.activeCount }}
-            </span>
-            <span
-              v-else-if="item.key === 'queue' && player.queue.length"
-              class="app-nav-badge"
-              style="background: var(--surface-2); color: var(--text-muted)"
+              <span class="nav-icon">
+                <Icon :name="item.icon" :size="18" />
+              </span>
+              <span>{{ item.label }}</span>
+            </button>
+
+            <div class="app-nav-section">音乐库</div>
+            <button
+              v-for="item in libraryItems"
+              :key="item.key"
+              type="button"
+              class="app-nav-item"
+              :class="{ active: active === item.key && !lyricOpen }"
+              @click="goNav(item.key)"
             >
-              {{ player.queue.length }}
-            </span>
-          </button>
+              <span class="nav-icon">
+                <Icon :name="item.icon" :size="18" />
+              </span>
+              <span>{{ item.label }}</span>
+              <span
+                v-if="item.key === 'download' && downloadStore.activeCount"
+                class="app-nav-badge"
+              >
+                {{ downloadStore.activeCount }}
+              </span>
+              <span
+                v-else-if="item.key === 'favorites' && favorites.count"
+                class="app-nav-badge"
+                style="background: var(--surface-2); color: var(--text-muted)"
+              >
+                {{ favorites.count }}
+              </span>
+              <span
+                v-else-if="item.key === 'queue' && player.queue.length"
+                class="app-nav-badge"
+                style="background: var(--surface-2); color: var(--text-muted)"
+              >
+                {{ player.queue.length }}
+              </span>
+            </button>
 
-          <div class="app-nav-spacer" />
+            <div class="app-nav-spacer" />
 
-          <div class="app-nav-section">系统</div>
-          <button type="button" class="app-nav-item" @click="openSettings">
-            <span class="nav-icon">
-              <Icon name="ri:settings-3-line" :size="18" />
-            </span>
-            <span>设置</span>
-          </button>
-        </nav>
+            <div class="app-nav-section">系统</div>
+            <button type="button" class="app-nav-item" @click="openSettings">
+              <span class="nav-icon">
+                <Icon name="ri:settings-3-line" :size="18" />
+              </span>
+              <span>设置</span>
+            </button>
+          </nav>
 
-        <main class="app-main">
-          <!-- 专辑/歌单为独立路由；SearchPanel 始终 v-show 挂载，返回不丢搜索结果 -->
-          <AlbumPanel v-if="isCollectionRoute" />
-          <ChartsPanel v-show="!isCollectionRoute && active === 'charts'" />
-          <SearchPanel v-show="!isCollectionRoute && active === 'search'" />
-          <QueuePanel v-show="!isCollectionRoute && active === 'queue'" />
-          <DownloadPanel v-show="!isCollectionRoute && active === 'download'" />
-        </main>
+          <main class="app-main">
+            <!-- 专辑/歌单为独立路由；SearchPanel 始终 v-show 挂载，返回不丢搜索结果 -->
+            <AlbumPanel v-if="isCollectionRoute" />
+            <ChartsPanel v-show="!isCollectionRoute && active === 'charts'" />
+            <SearchPanel v-show="!isCollectionRoute && active === 'search'" />
+            <FavoritesPanel
+              v-show="!isCollectionRoute && active === 'favorites'"
+            />
+            <QueuePanel v-show="!isCollectionRoute && active === 'queue'" />
+            <DownloadPanel
+              v-show="!isCollectionRoute && active === 'download'"
+            />
+          </main>
+        </div>
+
+        <!-- 沉浸歌词全屏时隐藏主播放条，控件改在歌词页内 -->
+        <PlayerBar v-show="!lyricOpen" />
+        <ImmersiveLyric />
+        <DownloadModal v-model:show="downloadShow" :track="downloadTrack" />
+        <UpdateDialog />
+        <div v-if="player.error" class="toast-error">
+          {{ player.error }}
+        </div>
       </div>
-
-      <!-- 沉浸歌词全屏时隐藏主播放条，控件改在歌词页内 -->
-      <PlayerBar v-show="!lyricOpen" />
-      <ImmersiveLyric />
-      <DownloadModal v-model:show="downloadShow" :track="downloadTrack" />
-      <UpdateDialog />
-      <div v-if="player.error" class="toast-error">
-        {{ player.error }}
-      </div>
-    </div>
-  </NMessageProvider>
+    </NMessageProvider>
+  </NDialogProvider>
 </template>
 
 <style scoped>

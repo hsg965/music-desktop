@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { NButton, NPopover, NSlider, NTooltip, NSpin, useMessage } from "naive-ui";
 import { usePlayerStore } from "../stores/player";
 import { useSettingsStore } from "../stores/settings";
+import { useFavoritesStore } from "../stores/favorites";
 import { formatTime } from "../utils/lrc";
 import { openDesktopLyric, openMiniPlayer } from "../utils/windows";
 import Icon from "./Icon.vue";
@@ -13,10 +14,20 @@ import type { Track } from "../types/music";
 
 const player = usePlayerStore();
 const settings = useSettingsStore();
+const favorites = useFavoritesStore();
 const { open: openDownload } = useDownloadModal();
 const { open: lyricOpen, toggle: toggleImmersiveLyric } = useImmersiveLyric();
 const message = useMessage();
 const queueShow = ref(false);
+
+const currentLiked = computed(() => favorites.isLiked(player.currentTrack));
+
+function toggleLikeCurrent() {
+  const t = player.currentTrack;
+  if (!t) return;
+  const liked = favorites.toggle(t);
+  message.success(liked ? "已添加到我喜欢的音乐" : "已取消喜欢");
+}
 
 const artist = computed(
   () => (player.currentTrack?.artist || []).join(" / ") || "未知歌手",
@@ -122,6 +133,24 @@ function clearQueue() {
           </div>
         </div>
       </button>
+      <NTooltip v-if="player.currentTrack">
+        <template #trigger>
+          <NButton
+            quaternary
+            circle
+            size="small"
+            class="like-current"
+            :class="{ liked: currentLiked }"
+            @click="toggleLikeCurrent"
+          >
+            <Icon
+              :name="currentLiked ? 'ri:heart-3-fill' : 'ri:heart-3-line'"
+              :size="16"
+            />
+          </NButton>
+        </template>
+        {{ currentLiked ? "取消喜欢" : "我喜欢" }}
+      </NTooltip>
       <NTooltip v-if="player.currentTrack">
         <template #trigger>
           <NButton
@@ -299,6 +328,10 @@ function clearQueue() {
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.like-current.liked {
+  color: var(--primary) !important;
 }
 
 .now-playing {

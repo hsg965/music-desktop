@@ -9,7 +9,11 @@ export type SkinId =
   | "porcelain"
   | "paper"
   | "honey-pop"
-  | "moss-forest";
+  | "moss-forest"
+  | "sage-mist"
+  | "cloud-tea"
+  | "lavender-haze"
+  | "misty-lake";
 
 /** 统一桌面壳布局；皮肤只改色与壁纸，不改结构 */
 export type LayoutId = "desktop";
