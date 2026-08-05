@@ -1,5 +1,23 @@
 /** 多窗口管理：迷你播放器 / 桌面歌词 */
 
+/** 显示并聚焦主窗口（关闭到托盘后可从此恢复） */
+export async function openMainWindow() {
+  try {
+    const { getAllWebviewWindows } = await import(
+      "@tauri-apps/api/webviewWindow"
+    );
+    const main = (await getAllWebviewWindows()).find((w) => w.label === "main");
+    if (!main) return null;
+    await main.show();
+    await main.unminimize();
+    await main.setFocus();
+    return main;
+  } catch (e) {
+    console.warn("openMainWindow failed", e);
+    return null;
+  }
+}
+
 export async function openMiniPlayer() {
   try {
     const { WebviewWindow, getAllWebviewWindows } = await import(

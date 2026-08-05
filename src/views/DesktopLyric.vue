@@ -3,7 +3,7 @@
  * 桌面歌词
  * - 顶栏拖拽；底栏悬停控制
  * - 三行歌词始终完整显示
- * - 移出窗口（含顶部）立即去掉背景
+ * - 未锁定：背景常显；锁定后隐藏背景（仅歌词 + 解锁入口）
  */
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import type { PlayerSnapshot } from "../types/music";
@@ -17,6 +17,7 @@ import {
   readDesktopLyricAppearanceFromStorage,
   type DesktopLyricColorMode,
 } from "../stores/settings";
+import { openMainWindow } from "../utils/windows";
 
 const STORAGE_KEY = "music-desktop-settings";
 
@@ -154,6 +155,10 @@ function unlock() {
   setLocked(false);
 }
 
+async function showMainWindow() {
+  await openMainWindow();
+}
+
 function bumpFont(delta: number) {
   fontSize.value = Math.min(56, Math.max(14, fontSize.value + delta));
   try {
@@ -272,13 +277,14 @@ onUnmounted(() => {
     :class="{
       'is-hover': activeHover,
       'is-locked': locked,
+      'has-bg': !locked,
     }"
     :style="rootStyle"
     @mouseenter="onEnter"
     @mouseleave="onLeave"
   >
-    <!-- 圆角背景：仅悬停 -->
-    <div class="glass" :class="{ on: activeHover }" aria-hidden="true" />
+    <!-- 圆角背景：未锁定常显，锁定后隐藏 -->
+    <div class="glass" :class="{ on: !locked }" aria-hidden="true" />
 
     <!-- 顶栏：整条可拖；悬停只显示歌名，不显示横条/提示文案 -->
     <header
@@ -301,6 +307,14 @@ onUnmounted(() => {
         class="drag-actions no-drag"
         :class="{ show: activeHover }"
       >
+        <button
+          type="button"
+          class="icon-btn"
+          title="打开主窗口"
+          @click.stop="showMainWindow"
+        >
+          <Icon name="ri:home-line" :size="14" />
+        </button>
         <button
           type="button"
           class="icon-btn"
@@ -396,7 +410,7 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* 悬停：底层皮肤壁纸 + 上层磨砂（token 与主窗一致） */
+/* 未锁定：底层皮肤壁纸 + 上层磨砂（token 与主窗一致） */
 .glass.on {
   opacity: 1;
   border: 1px solid var(--border);
@@ -591,8 +605,8 @@ onUnmounted(() => {
   opacity: 0.28;
 }
 
-/* 悬停磨砂时用皮肤文字色 */
-.dl.is-hover .line.side {
+/* 有背景时用皮肤文字色 */
+.dl.has-bg .line.side {
   color: var(--text-muted);
   text-shadow: none;
 }
@@ -614,7 +628,7 @@ onUnmounted(() => {
   overflow: visible;
 }
 
-.dl.is-hover .current-main {
+.dl.has-bg .current-main {
   color: var(--dl-accent, var(--primary));
   text-shadow: none;
 }
@@ -628,7 +642,7 @@ onUnmounted(() => {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
 
-.dl.is-hover .current-trans {
+.dl.has-bg .current-trans {
   color: var(--text-muted);
   text-shadow: none;
 }
