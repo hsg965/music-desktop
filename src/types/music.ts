@@ -74,7 +74,8 @@ export interface PlaylistDetail {
   tracks: Track[];
 }
 
-export type PlayMode = "list" | "single" | "order";
+/** list 列表循环 | single 单曲循环 | order 顺序播完停 | shuffle 列表随机 */
+export type PlayMode = "list" | "single" | "order" | "shuffle";
 
 export interface PlayerSnapshot {
   track: Track | null;

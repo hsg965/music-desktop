@@ -36,6 +36,7 @@ const artist = computed(
 const modeIcon = computed(() => {
   if (player.mode === "single") return "ri:repeat-one-fill";
   if (player.mode === "order") return "ri:order-play-fill";
+  if (player.mode === "shuffle") return "ri:shuffle-fill";
   return "ri:repeat-fill";
 });
 
@@ -47,6 +48,7 @@ const activeKey = computed(() => {
 const modeTip = computed(() => {
   if (player.mode === "single") return "单曲循环";
   if (player.mode === "order") return "顺序播放";
+  if (player.mode === "shuffle") return "列表随机";
   return "列表循环";
 });
 

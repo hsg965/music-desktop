@@ -50,6 +50,8 @@ export const usePlayerStore = defineStore("player", () => {
   const error = ref("");
   const lyricText = ref("");
   const tlyricText = ref("");
+  /** 随机模式下的上一首历史（索引），用于 prev 回退 */
+  const shuffleHistory: number[] = [];
 
   const currentTrack = computed(() =>
     currentIndex.value >= 0 ? queue.value[currentIndex.value] ?? null : null,
@@ -300,6 +302,7 @@ export const usePlayerStore = defineStore("player", () => {
   /** 用列表替换队列并从第一首开始播（一键播放） */
   async function playAll(tracks: Track[], startIndex = 0) {
     if (!tracks.length) return;
+    shuffleHistory.length = 0;
     queue.value = tracks.map((t) => ({ ...t }));
     const idx = Math.max(0, Math.min(startIndex, queue.value.length - 1));
     await playAt(idx);
@@ -318,6 +321,7 @@ export const usePlayerStore = defineStore("player", () => {
   function removeFromQueue(index: number) {
     if (index < 0 || index >= queue.value.length) return;
     queue.value.splice(index, 1);
+    shuffleHistory.length = 0;
     if (currentIndex.value === index) {
       stop();
       currentIndex.value = -1;
@@ -331,9 +335,23 @@ export const usePlayerStore = defineStore("player", () => {
     stop();
     queue.value = [];
     currentIndex.value = -1;
+    shuffleHistory.length = 0;
     lyricText.value = "";
     tlyricText.value = "";
     broadcastState();
+  }
+
+  /** 在队列中随机选一首（尽量避开当前曲） */
+  function pickShuffleIndex(): number {
+    const n = queue.value.length;
+    if (n <= 0) return -1;
+    if (n === 1) return 0;
+    let idx = Math.floor(Math.random() * n);
+    let guard = 0;
+    while (idx === currentIndex.value && guard++ < 24) {
+      idx = Math.floor(Math.random() * n);
+    }
+    return idx;
   }
 
   async function toggle() {
@@ -374,6 +392,16 @@ export const usePlayerStore = defineStore("player", () => {
       await playAt(currentIndex.value);
       return;
     }
+    if (mode.value === "shuffle") {
+      if (currentIndex.value >= 0) {
+        shuffleHistory.push(currentIndex.value);
+        if (shuffleHistory.length > 80) shuffleHistory.shift();
+      }
+      const idx = pickShuffleIndex();
+      if (idx < 0) return;
+      await playAt(idx);
+      return;
+    }
     const nextIdx = currentIndex.value + 1;
     if (nextIdx >= queue.value.length) {
       if (mode.value === "list") {
@@ -391,6 +419,20 @@ export const usePlayerStore = defineStore("player", () => {
     if (!queue.value.length) return;
     if (currentTime.value > 3) {
       seek(0);
+      return;
+    }
+    if (mode.value === "shuffle") {
+      while (shuffleHistory.length) {
+        const idx = shuffleHistory.pop()!;
+        if (idx >= 0 && idx < queue.value.length && idx !== currentIndex.value) {
+          await playAt(idx);
+          return;
+        }
+      }
+      // 无历史则再随机一首
+      const idx = pickShuffleIndex();
+      if (idx < 0) return;
+      await playAt(idx);
       return;
     }
     const prevIdx = currentIndex.value - 1;
@@ -420,14 +462,15 @@ export const usePlayerStore = defineStore("player", () => {
   }
 
   function setMode(m: PlayMode) {
+    if (m !== "shuffle") shuffleHistory.length = 0;
     mode.value = m;
     broadcastState();
   }
 
   function cycleMode() {
-    const order: PlayMode[] = ["list", "single", "order"];
+    const order: PlayMode[] = ["list", "single", "order", "shuffle"];
     const i = order.indexOf(mode.value);
-    setMode(order[(i + 1) % order.length]);
+    setMode(order[(i + 1) % order.length] ?? "list");
   }
 
   async function onEnded() {
