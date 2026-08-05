@@ -1,50 +1,6 @@
 /**
- * 接口限流：5 分钟内最多 50 次真实请求
- * 配合缓存与 in-flight 去重，避免浪费配额
+ * 接口请求缓存与 in-flight 去重（已取消客户端频率限制）
  */
-
-const WINDOW_MS = 5 * 60 * 1000;
-const MAX_REQUESTS = 50;
-
-/** 时间戳队列（成功发出的真实请求） */
-const timestamps: number[] = [];
-
-function prune(now = Date.now()) {
-  while (timestamps.length && now - timestamps[0] >= WINDOW_MS) {
-    timestamps.shift();
-  }
-}
-
-export function getRateLimitStatus() {
-  prune();
-  const used = timestamps.length;
-  const remaining = Math.max(0, MAX_REQUESTS - used);
-  const resetInMs =
-    timestamps.length > 0
-      ? Math.max(0, WINDOW_MS - (Date.now() - timestamps[0]))
-      : 0;
-  return { used, remaining, max: MAX_REQUESTS, resetInMs, windowMs: WINDOW_MS };
-}
-
-export function canRequestNow(): boolean {
-  prune();
-  return timestamps.length < MAX_REQUESTS;
-}
-
-/** 登记一次真实请求；超限抛错 */
-export function acquireRequestSlot(): void {
-  prune();
-  if (timestamps.length >= MAX_REQUESTS) {
-    const status = getRateLimitStatus();
-    const sec = Math.ceil(status.resetInMs / 1000);
-    throw new Error(
-      `接口请求过于频繁（5 分钟内最多 ${MAX_REQUESTS} 次），请约 ${sec} 秒后再试`,
-    );
-  }
-  timestamps.push(Date.now());
-}
-
-// ---------- 缓存 ----------
 
 interface CacheEntry<T> {
   data: T;
@@ -91,7 +47,7 @@ function isEmptyCacheValue(data: unknown): boolean {
   return false;
 }
 
-/** 带缓存 + 去重 + 限流 的请求封装 */
+/** 带缓存 + 去重 的请求封装 */
 export async function cachedRequest<T>(
   key: string,
   ttlMs: number,
@@ -113,7 +69,6 @@ export async function cachedRequest<T>(
   }
 
   const promise = (async () => {
-    acquireRequestSlot();
     try {
       const data = await fetcher();
       // 空结果不缓存，方便用户马上重试

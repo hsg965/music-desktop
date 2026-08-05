@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import {
   NSelect,
   NSlider,
@@ -10,7 +10,7 @@ import {
   NRadio,
   NMessageProvider,
 } from "naive-ui";
-import { BITRATE_OPTIONS, MUSIC_SOURCES, getRateLimitStatus } from "../api/music";
+import { BITRATE_OPTIONS, MUSIC_SOURCES } from "../api/music";
 import {
   DEFAULT_LYRIC_LOOKAHEAD,
   useSettingsStore,
@@ -58,8 +58,6 @@ const {
   openGitHubReleases,
 } = useUpdater();
 
-const rate = ref(getRateLimitStatus());
-let rateTimer: number | null = null;
 const cachePath = ref("");
 const cacheFileCount = ref(0);
 const cacheTotalBytes = ref(0);
@@ -79,9 +77,6 @@ const lookAheadValue = computed(() => {
   return typeof v === "number" && Number.isFinite(v) ? v : DEFAULT_LYRIC_LOOKAHEAD;
 });
 const lookAheadLabel = computed(() => lookAheadValue.value.toFixed(2));
-const quotaPct = computed(() =>
-  Math.min(100, Math.round((rate.value.used / Math.max(1, rate.value.max)) * 100)),
-);
 
 const sourceOptions = MUSIC_SOURCES.map((s) => ({ label: s.label, value: s.value }));
 const brOptions = BITRATE_OPTIONS.map((b) => ({ label: b.label, value: b.value }));
@@ -162,13 +157,6 @@ onMounted(() => {
   }
   void loadCurrentVersion();
   void refreshCacheStats();
-  rateTimer = window.setInterval(() => {
-    rate.value = getRateLimitStatus();
-  }, 2000);
-});
-
-onUnmounted(() => {
-  if (rateTimer != null) window.clearInterval(rateTimer);
 });
 </script>
 
@@ -415,21 +403,6 @@ onUnmounted(() => {
                     >
                       清空缓存
                     </NButton>
-                  </div>
-                </div>
-                <div class="sep" />
-                <div class="row block">
-                  <div class="label">
-                    <div class="label-main">接口配额</div>
-                    <div class="label-sub">
-                      近 5 分钟 {{ rate.used }} / {{ rate.max }}（剩余
-                      {{ rate.remaining }}）
-                    </div>
-                  </div>
-                  <div class="control full">
-                    <div class="meter">
-                      <div class="meter-fill" :style="{ width: quotaPct + '%' }" />
-                    </div>
                   </div>
                 </div>
               </div>
@@ -726,24 +699,6 @@ onUnmounted(() => {
   color: var(--text-muted);
   font-family: ui-monospace, Consolas, monospace;
   flex: 0 0 auto;
-}
-
-.meter {
-  width: 100%;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--surface-2);
-  overflow: hidden;
-}
-
-html[data-mode="light"] .meter {
-  background: rgba(0, 0, 0, 0.08);
-}
-
-.meter-fill {
-  height: 100%;
-  background: var(--primary);
-  transition: width 0.2s ease;
 }
 
 .toast {

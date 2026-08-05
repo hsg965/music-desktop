@@ -9,11 +9,7 @@ import type {
   Track,
   UrlResult,
 } from "../types/music";
-import {
-  cacheKey,
-  cachedRequest,
-  getRateLimitStatus,
-} from "./rateLimit";
+import { cacheKey, cachedRequest } from "./rateLimit";
 
 const BASE = "https://music.gdstudio.xyz/api.php";
 // const BASE = "https://music-api.gdstudio.xyz/api.php";
@@ -482,8 +478,7 @@ export async function fetchPlayUrl(
     );
     if (data && data.url) return data;
     return null;
-  } catch (e) {
-    if (e instanceof Error && e.message.includes("过于频繁")) throw e;
+  } catch {
     return null;
   }
 }
@@ -505,8 +500,7 @@ export async function fetchPicUrl(
       TTL.pic,
     );
     return data?.url || "";
-  } catch (e) {
-    if (e instanceof Error && e.message.includes("过于频繁")) throw e;
+  } catch {
     return "";
   }
 }
@@ -529,13 +523,10 @@ export async function fetchLyric(
       lyric: data?.lyric || "",
       tlyric: data?.tlyric || "",
     };
-  } catch (e) {
-    if (e instanceof Error && e.message.includes("过于频繁")) throw e;
+  } catch {
     return { lyric: "", tlyric: "" };
   }
 }
-
-export { getRateLimitStatus };
 
 export const MUSIC_SOURCES: { label: string; value: MusicSource }[] = [
   { label: "网易云", value: "netease" },
