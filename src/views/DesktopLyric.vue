@@ -3,7 +3,8 @@
  * 桌面歌词
  * - 顶栏拖拽；底栏悬停控制
  * - 三行歌词始终完整显示
- * - 未锁定：背景常显；锁定后隐藏背景（仅歌词 + 解锁入口）
+ * - 未锁定：磨砂背景常显（保留皮肤背景图，约 90% 不透明），歌名常显；悬停再出控件
+ * - 锁定后隐藏背景（仅歌词 + 解锁入口）；顶栏仍可拖
  */
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import type { PlayerSnapshot } from "../types/music";
@@ -32,6 +33,11 @@ const fontSize = ref(DEFAULT_DESKTOP_LYRIC_FONT_SIZE);
 let unlisten: (() => void) | null = null;
 let unlistenCmd: (() => void) | null = null;
 let skinTimer: number | null = null;
+/** 系统拖拽窗口时会误发 leave/blur，拖拽中/拖完短时忽略收起悬停 */
+let dragging = false;
+/** 拖完后 leave/blur 常延迟到达，在此时间戳前不 clearHover */
+let suppressLeaveUntil = 0;
+const hoverRestoreTimers: number[] = [];
 
 const lines = computed(() => parseLrc(state.value?.lyricText || ""));
 const tlines = computed(() => parseLrc(state.value?.tlyricText || ""));
@@ -107,8 +113,40 @@ const rootStyle = computed(() => ({
 
 const activeHover = computed(() => hovered.value && !locked.value);
 
+function leaveSuppressed() {
+  return dragging || Date.now() < suppressLeaveUntil;
+}
+
 function clearHover() {
+  if (leaveSuppressed()) return;
   hovered.value = false;
+}
+
+function forceHover() {
+  if (locked.value) return;
+  hovered.value = true;
+}
+
+function clearHoverRestoreTimers() {
+  while (hoverRestoreTimers.length) {
+    const id = hoverRestoreTimers.pop();
+    if (id != null) window.clearTimeout(id);
+  }
+}
+
+/** 拖窗结束后强制恢复悬停（补偿延迟 leave/blur 与 WebView 不补 mouseenter） */
+function restoreHoverAfterDrag() {
+  clearHoverRestoreTimers();
+  suppressLeaveUntil = Date.now() + 500;
+  forceHover();
+  // 同一事件循环 / 稍后再次补齐，防止晚到的 leave 把状态清掉
+  for (const ms of [0, 32, 100, 200]) {
+    hoverRestoreTimers.push(
+      window.setTimeout(() => {
+        if (!locked.value) forceHover();
+      }, ms),
+    );
+  }
 }
 
 async function emitCmd(cmd: string) {
@@ -120,19 +158,12 @@ async function emitCmd(cmd: string) {
   }
 }
 
-async function ensureClickable() {
-  try {
-    const { getCurrentWindow } = await import("@tauri-apps/api/window");
-    await getCurrentWindow().setIgnoreCursorEvents(false);
-  } catch {
-    // ignore
-  }
-}
-
 async function closeWin() {
   locked.value = false;
-  clearHover();
-  await ensureClickable();
+  dragging = false;
+  suppressLeaveUntil = 0;
+  clearHoverRestoreTimers();
+  hovered.value = false;
   try {
     const { getCurrentWindow } = await import("@tauri-apps/api/window");
     await getCurrentWindow().close();
@@ -143,8 +174,9 @@ async function closeWin() {
 
 function setLocked(v: boolean) {
   locked.value = v;
-  clearHover();
-  void ensureClickable();
+  suppressLeaveUntil = 0;
+  clearHoverRestoreTimers();
+  hovered.value = false;
 }
 
 function toggleLock() {
@@ -184,11 +216,19 @@ function syncFromStorage() {
   }
 }
 
+/** 未锁定时：指针在整窗内即显示控件（不限顶栏） */
 function onEnter() {
-  if (!locked.value) hovered.value = true;
+  forceHover();
+}
+
+/** 整窗内任意移动也补一次悬停（拖完 WebView 常不补 mouseenter） */
+function onPointerMove() {
+  if (locked.value || dragging) return;
+  if (!hovered.value) hovered.value = true;
 }
 
 function onLeave(e: MouseEvent) {
+  if (leaveSuppressed()) return;
   // 从顶部移出窗口时，relatedTarget 常为 null，必须收起
   const related = e.relatedTarget as Node | null;
   if (related && (e.currentTarget as HTMLElement).contains(related)) {
@@ -197,30 +237,30 @@ function onLeave(e: MouseEvent) {
   clearHover();
 }
 
-/** 顶栏拖拽 */
+/** 顶栏拖拽（锁定态也允许） */
 async function onDragBarDown(e: PointerEvent) {
-  if (locked.value) return;
   if (e.button !== 0) return;
   const t = e.target as HTMLElement | null;
   if (t?.closest(".no-drag")) return;
-  clearHover();
+  // 系统拖窗期间会误发 leave；拖中保持悬停态，避免控件闪没
+  dragging = true;
+  clearHoverRestoreTimers();
+  forceHover();
   try {
     const { getCurrentWindow } = await import("@tauri-apps/api/window");
     await getCurrentWindow().startDragging();
   } catch {
     // ignore
   } finally {
-    // 拖拽结束后从顶栏松手，补一次收起（Windows 常丢 mouseleave）
-    clearHover();
+    dragging = false;
+    // 拖完后 leave 常延迟到达且 WebView 不补 mouseenter，主动恢复
+    restoreHoverAfterDrag();
   }
 }
 
 /** 指针离开整个文档（从窗口任意边缘含顶部离开） */
 function onDocumentPointerLeave() {
-  clearHover();
-}
-
-function onWindowBlur() {
+  if (leaveSuppressed()) return;
   clearHover();
 }
 
@@ -228,7 +268,6 @@ onMounted(async () => {
   document.documentElement.classList.add("lyric-window");
   document.body.classList.add("lyric-window");
   syncFromStorage();
-  await ensureClickable();
   skinTimer = window.setInterval(syncFromStorage, 800);
 
   // 顶栏移出窗口时 mouseleave 经常不触发，用 document 级兜底
@@ -237,7 +276,6 @@ onMounted(async () => {
     onDocumentPointerLeave,
   );
   document.addEventListener("mouseleave", onDocumentPointerLeave);
-  window.addEventListener("blur", onWindowBlur);
   // 指针在窗口外时（部分 WebView 用这个）
   window.addEventListener("pointerleave", onDocumentPointerLeave);
 
@@ -263,11 +301,12 @@ onUnmounted(() => {
     onDocumentPointerLeave,
   );
   document.removeEventListener("mouseleave", onDocumentPointerLeave);
-  window.removeEventListener("blur", onWindowBlur);
   window.removeEventListener("pointerleave", onDocumentPointerLeave);
   unlisten?.();
   unlistenCmd?.();
-  void ensureClickable();
+  dragging = false;
+  suppressLeaveUntil = 0;
+  clearHoverRestoreTimers();
 });
 </script>
 
@@ -282,11 +321,15 @@ onUnmounted(() => {
     :style="rootStyle"
     @mouseenter="onEnter"
     @mouseleave="onLeave"
+    @pointermove="onPointerMove"
   >
-    <!-- 圆角背景：未锁定常显，锁定后隐藏 -->
-    <div class="glass" :class="{ on: !locked }" aria-hidden="true" />
+    <!-- 圆角磨砂背景：皮肤图 + 磨砂层，未锁定常显；需可命中以接收整窗悬停 -->
+    <div class="glass" :class="{ on: !locked }" aria-hidden="true">
+      <div class="glass-photo" />
+      <div class="glass-frost" />
+    </div>
 
-    <!-- 顶栏：整条可拖；悬停只显示歌名，不显示横条/提示文案 -->
+    <!-- 顶栏：整条可拖；未锁定时歌名常显，悬停再出操作按钮 -->
     <header
       class="drag-bar"
       data-tauri-drag-region
@@ -294,7 +337,7 @@ onUnmounted(() => {
     >
       <div class="drag-fill" data-tauri-drag-region>
         <span
-          v-if="activeHover"
+          v-if="!locked"
           class="drag-meta truncate"
           data-tauri-drag-region
         >
@@ -342,7 +385,7 @@ onUnmounted(() => {
       </button>
     </div>
 
-    <!-- 歌词：悬停时上移，避开底栏控件 -->
+    <!-- 歌词区：未锁定时预留上下空间，避免移出后只剩一行字贴在大空框里 -->
     <div class="stage">
       <div class="line side" :class="{ empty: !prevText }">
         {{ prevText || "\u00a0" }}
@@ -356,7 +399,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 底栏控制：不压住歌词（歌词区已预留底部空间） -->
+    <!-- 底栏控制：悬停显示 -->
     <footer class="dock no-drag" :class="{ show: activeHover }">
       <button type="button" class="tb-btn" title="缩小字号" @click.stop="bumpFont(-2)">
         <span class="tb-font">A−</span>
@@ -398,6 +441,12 @@ onUnmounted(() => {
   user-select: none;
 }
 
+/* 未锁定：整窗区域可命中（透明窗仅不透明像素才吃鼠标，靠玻璃层接住） */
+.dl.has-bg {
+  /* 极淡底色，避免部分 WebView 在边缘漏点 */
+  background: rgba(0, 0, 0, 0.001);
+}
+
 .glass {
   position: absolute;
   inset: 6px;
@@ -406,28 +455,38 @@ onUnmounted(() => {
   pointer-events: none;
   background: transparent;
   opacity: 0;
-  transition: opacity 0.12s ease;
+  transition: opacity 0.18s ease;
   overflow: hidden;
 }
 
-/* 未锁定：底层皮肤壁纸 + 上层磨砂（token 与主窗一致） */
+/* 未锁定：保留皮肤背景图，整体 90% 不透明；并接收指针（整窗悬停） */
 .glass.on {
-  opacity: 1;
+  opacity: 0.9;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(var(--panel-blur)) saturate(1.12);
-  -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(1.12);
+  pointer-events: auto;
+}
+
+/* 底层：皮肤壁纸（一点点糊即可） */
+.glass-photo {
+  position: absolute;
+  inset: -3px;
   background-image:
-    linear-gradient(
-      color-mix(in srgb, var(--bar-bg) 90%, transparent),
-      color-mix(in srgb, var(--bar-bg) 90%, transparent)
-    ),
     var(--wallpaper-overlay, none),
     var(--wallpaper-image, none),
     var(--wallpaper, var(--bg));
-  background-size: auto, auto, cover, auto;
+  background-size: auto, cover, auto;
   background-position: center;
   background-repeat: no-repeat;
+  filter: blur(1.5px) saturate(1.02);
+  transform: scale(1.01);
+}
+
+/* 上层：磨砂遮罩（扎实） */
+.glass-frost {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bar-bg) 78%, transparent);
 }
 
 .no-drag {
@@ -454,10 +513,9 @@ onUnmounted(() => {
   border-radius: 14px 14px 0 0;
 }
 
+/* 锁定态顶栏仍可拖；解锁按钮用 .no-drag 排除 */
 .dl.is-locked .drag-bar {
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
-  cursor: default;
+  cursor: grab;
 }
 
 .drag-bar:active {
@@ -474,9 +532,16 @@ onUnmounted(() => {
 
 .drag-meta {
   font-size: 11px;
-  color: var(--text-muted);
+  color: color-mix(in srgb, var(--text-muted) 88%, transparent);
   font-weight: 500;
   max-width: 100%;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+  transition: color 0.12s ease;
+}
+
+.dl.is-hover .drag-meta {
+  color: var(--text-muted);
 }
 
 .drag-actions {
@@ -554,7 +619,7 @@ onUnmounted(() => {
   color: var(--primary);
 }
 
-/* 歌词：中间区域；悬停时加大底部 padding，躲开控件 */
+/* 歌词：中间区域；未锁定时始终预留顶栏/底栏空间，移出鼠标布局不塌 */
 .stage {
   position: absolute;
   top: 6px;
@@ -566,19 +631,18 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   padding: 36px 22px 20px;
   box-sizing: border-box;
   text-align: center;
   pointer-events: none;
   overflow: hidden;
-  transition: padding-bottom 0.12s ease;
+  transition: padding 0.12s ease;
 }
 
-.dl.is-hover .stage {
-  /* 底栏约 52px，歌词整体上移，不被挡住 */
-  padding-bottom: 56px;
-  padding-top: 38px;
+.dl.has-bg .stage {
+  /* 顶栏歌名 + 底栏预留，空闲态也像完整卡片 */
+  padding: 40px 24px 52px;
 }
 
 .line {
@@ -605,7 +669,7 @@ onUnmounted(() => {
   opacity: 0.28;
 }
 
-/* 有背景时用皮肤文字色 */
+/* 有背景：皮肤文字色 */
 .dl.has-bg .line.side {
   color: var(--text-muted);
   text-shadow: none;
